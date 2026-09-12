@@ -4,7 +4,8 @@ extends Node2D
 ## Tipos do GDD.
 enum FrogType { GREEN, YELLOW, BLUE, GOLDEN, STRANGE }
 
-const SCALE := 0.18
+## Escala confortável (o 0.36 ficou gigante no mapa atual).
+const SCALE := 0.22
 const WALK_FRAME_DURATION := 0.15
 const ACTION_FRAME_DURATION := 0.15
 const IDLE_FRAME_DURATIONS := [2.0, 0.5, 0.8, 1.2]
@@ -16,7 +17,7 @@ const GOLDEN_TINT := Color(1.2, 0.85, 0.15, 1.0)
 const FROZEN_TINT := Color(0.55, 0.85, 1.2, 1.0)
 
 const VISION_RADIUS := 150.0
-const CONTACT_RADIUS := 42.0
+const CONTACT_RADIUS := 48.0
 const PATROL_SPEED := 55.0
 const CHASE_SPEED := 110.0
 
@@ -42,6 +43,9 @@ const GOLDEN_PATROL_SPEED := 180.0
 const GOLDEN_FLEE_SPEED := 260.0
 const GOLDEN_LIFETIME := 5.0
 const GOLDEN_DIR_CHANGE := 0.25
+
+## Escala de dificuldade do mapa atual (1.0 = mapa 1).
+static var difficulty_scale := 1.0
 
 @onready var sprite: Sprite2D = $Sprite2D
 
@@ -180,10 +184,10 @@ func _process_strange(delta: float) -> void:
 	if player != null and is_instance_valid(player):
 		var to_player: Vector2 = player.get_center() - get_center()
 		var distance: float = to_player.length()
-		if distance <= VISION_RADIUS and distance > 0.1:
+		if distance <= VISION_RADIUS * difficulty_scale and distance > 0.1:
 			chasing = true
 			move_dir = to_player.normalized()
-			speed = CHASE_SPEED
+			speed = CHASE_SPEED * difficulty_scale
 			moving = true
 
 	if not chasing:
@@ -219,10 +223,10 @@ func _process_golden(delta: float) -> void:
 	if player != null and is_instance_valid(player):
 		var away: Vector2 = get_center() - player.get_center()
 		var distance: float = away.length()
-		if distance <= GOLDEN_DETECT_RADIUS and distance > 0.1:
+		if distance <= GOLDEN_DETECT_RADIUS * difficulty_scale and distance > 0.1:
 			fleeing = true
 			move_dir = away.normalized()
-			speed = GOLDEN_FLEE_SPEED
+			speed = GOLDEN_FLEE_SPEED * difficulty_scale
 
 	if not fleeing and golden_dir_timer <= 0.0:
 		golden_dir_timer = GOLDEN_DIR_CHANGE
@@ -238,19 +242,19 @@ func _process_golden(delta: float) -> void:
 
 
 func _process_fleeing_frog(delta: float) -> void:
-	var detect_radius := GREEN_DETECT_RADIUS
+	var detect_radius := GREEN_DETECT_RADIUS * difficulty_scale
 	var patrol_speed := GREEN_PATROL_SPEED
-	var flee_speed := GREEN_FLEE_SPEED
+	var flee_speed := GREEN_FLEE_SPEED * difficulty_scale
 
 	match frog_type:
 		FrogType.YELLOW:
-			detect_radius = YELLOW_DETECT_RADIUS
+			detect_radius = YELLOW_DETECT_RADIUS * difficulty_scale
 			patrol_speed = YELLOW_PATROL_SPEED
-			flee_speed = YELLOW_FLEE_SPEED
+			flee_speed = YELLOW_FLEE_SPEED * difficulty_scale
 		FrogType.BLUE:
-			detect_radius = BLUE_DETECT_RADIUS
+			detect_radius = BLUE_DETECT_RADIUS * difficulty_scale
 			patrol_speed = BLUE_PATROL_SPEED
-			flee_speed = BLUE_FLEE_SPEED
+			flee_speed = BLUE_FLEE_SPEED * difficulty_scale
 		_:
 			pass
 
@@ -320,11 +324,13 @@ func _random_dir() -> Vector2:
 
 
 func _clamp_to_screen() -> void:
-	position.x = clampf(position.x, 0.0, 760.0)
-	position.y = clampf(position.y, 0.0, 520.0)
-	if position.x <= 0.0 or position.x >= 760.0:
+	var max_x: float = Screen.width() - 70.0
+	var max_y: float = Screen.height() - 90.0
+	position.x = clampf(position.x, 0.0, max_x)
+	position.y = clampf(position.y, 0.0, max_y)
+	if position.x <= 0.0 or position.x >= max_x:
 		move_dir.x *= -1.0
-	if position.y <= 0.0 or position.y >= 520.0:
+	if position.y <= 0.0 or position.y >= max_y:
 		move_dir.y *= -1.0
 
 

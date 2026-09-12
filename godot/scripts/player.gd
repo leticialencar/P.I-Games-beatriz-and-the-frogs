@@ -3,9 +3,10 @@ extends CharacterBody2D
 
 signal died
 
-const BASE_SPEED := 240.0
+const BASE_SPEED := 280.0
 const FRAME_SIZE := Vector2(200, 218)
-const DISPLAY_SIZE := Vector2(100, 109)
+## Tamanho confortável pro viewport 1280x720 (sem exagerar).
+const DISPLAY_SIZE := Vector2(112, 122)
 const FRAME_DURATION := 0.15
 const MAX_LIVES := 3
 const INVULN_DURATION := 1.5
@@ -141,8 +142,9 @@ func _handle_movement() -> void:
 
 	velocity = input_vector * BASE_SPEED * speed_multiplier
 
-	global_position.x = clampf(global_position.x, 0.0, 800.0 - DISPLAY_SIZE.x)
-	global_position.y = clampf(global_position.y, 0.0, 600.0 - DISPLAY_SIZE.y)
+	var screen := Screen.size()
+	global_position.x = clampf(global_position.x, 0.0, screen.x - DISPLAY_SIZE.x)
+	global_position.y = clampf(global_position.y, 0.0, screen.y - DISPLAY_SIZE.y)
 
 
 func _update_animation(delta: float) -> void:

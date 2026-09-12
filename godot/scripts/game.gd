@@ -1,10 +1,6 @@
 extends Node2D
 
-const GAME_DURATION_MS := 60000.0
-const MIN_FROGS := 3
-const MAX_FROGS := 8
-const CATCH_DISTANCE := 80.0
-const MAX_STRANGE := 2
+const CATCH_DISTANCE := 90.0
 const MAX_YELLOW := 1
 const MAX_BLUE := 1
 const MAX_GOLDEN := 1
@@ -16,9 +12,6 @@ const BLUE_SPAWN_MIN := 12.0
 const BLUE_SPAWN_MAX := 18.0
 const GOLDEN_SPAWN_MIN := 16.0
 const GOLDEN_SPAWN_MAX := 24.0
-## Se limpar os vermelhos, voltam depois deste intervalo.
-const STRANGE_RESPAWN_MIN := 6.0
-const STRANGE_RESPAWN_MAX := 10.0
 
 const FrogScene := preload("res://scenes/frog.tscn")
 const PlayerScene := preload("res://scenes/player.tscn")
@@ -26,15 +19,20 @@ const PlayerScene := preload("res://scenes/player.tscn")
 @onready var background: Sprite2D = $Background
 @onready var entities: Node2D = $Entities
 @onready var counter_label: Label = $HUD/CounterPanel/CounterLabel
-@onready var timer_label: Label = $HUD/TimerPanel/TimerLabel
+@onready var goal_label: Label = $HUD/TimerPanel/TimerLabel
 @onready var lives_label: Label = $HUD/LivesPanel/LivesLabel
+@onready var map_label: Label = $HUD/MapLabel
 @onready var boost_label: Label = $HUD/BoostLabel
 @onready var prompt_label: Label = $HUD/PromptLabel
+@onready var transition_label: Label = $HUD/TransitionLabel
 @onready var music: AudioStreamPlayer = $Music
 
 var player: Player
 var frogs: Array[Frog] = []
-var frogs_caught := 0
+var level: Dictionary = {}
+var current_map := 1
+var map_points := 0
+var total_points := 0
 var game_time_ms := 0.0
 var spawn_timer := 0.0
 var spawn_interval := 0.0
@@ -43,25 +41,34 @@ var blue_spawn_timer := 0.0
 var golden_spawn_timer := 0.0
 var strange_respawn_timer := 0.0
 var freeze_timer := 0.0
+var transition_timer := 0.0
 var finished := false
 
 
 func _ready() -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	GameState.reset()
-	_setup_background()
 	_spawn_player()
-	_spawn_initial_frogs()
-	spawn_interval = randf_range(0.3, 0.7)
-	yellow_spawn_timer = randf_range(4.0, 7.0)
-	blue_spawn_timer = randf_range(9.0, 12.0)
-	golden_spawn_timer = randf_range(14.0, 18.0)
-	strange_respawn_timer = randf_range(STRANGE_RESPAWN_MIN, STRANGE_RESPAWN_MAX)
+	_layout_hud()
+	_start_map(1)
 	boost_label.visible = false
+	transition_label.visible = false
 	music.play()
+	get_viewport().size_changed.connect(_on_viewport_resized)
+
+
+func _on_viewport_resized() -> void:
+	_layout_hud()
+	_setup_background(str(level.get("background", "res://assets/background/background.png")))
 
 
 func _process(delta: float) -> void:
 	if finished:
+		return
+
+	if transition_timer > 0.0:
+		transition_timer -= delta
+		transition_label.visible = transition_timer > 0.0
 		return
 
 	game_time_ms += delta * 1000.0
@@ -74,47 +81,122 @@ func _process(delta: float) -> void:
 	_update_hud()
 	_update_prompt()
 
-	if game_time_ms >= GAME_DURATION_MS:
-		_finish_game(true)
+	if map_points >= int(level["goal"]):
+		_on_map_cleared()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if finished:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F11:
+			_toggle_fullscreen()
+			return
+
+	if finished or transition_timer > 0.0:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
 			_try_catch_frog()
 
 
-func _setup_background() -> void:
-	var texture := load("res://assets/background/background.png") as Texture2D
+func _toggle_fullscreen() -> void:
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+
+func _layout_hud() -> void:
+	var screen := Screen.size()
+
+	$HUD/CounterPanel.position = Vector2(16, 16)
+	$HUD/LivesPanel.position = Vector2(screen.x * 0.5 - 70.0, 16)
+	$HUD/TimerPanel.position = Vector2(screen.x - 156.0, 16)
+
+	map_label.position = Vector2(screen.x * 0.5 - 150.0, screen.y - 48.0)
+	map_label.size = Vector2(300, 30)
+
+	boost_label.position = Vector2(screen.x * 0.5 - 150.0, 110)
+	boost_label.size = Vector2(300, 30)
+
+	transition_label.position = Vector2(screen.x * 0.5 - 300.0, screen.y * 0.5 - 60.0)
+	transition_label.size = Vector2(600, 120)
+
+
+func _setup_background(path: String = "res://assets/background/background.png") -> void:
+	var texture := load(path) as Texture2D
+	if texture == null:
+		push_warning("Fundo não carregou: %s — usando fallback." % path)
+		texture = load("res://assets/background/background.png") as Texture2D
+	if texture == null:
+		return
+
+	var screen := Screen.size()
 	background.texture = texture
 	background.centered = false
 	background.scale = Vector2(
-		800.0 / texture.get_width(),
-		600.0 / texture.get_height()
+		screen.x / float(texture.get_width()),
+		screen.y / float(texture.get_height())
 	)
 
 
 func _spawn_player() -> void:
 	player = PlayerScene.instantiate() as Player
-	player.position = Vector2(100, 100)
+	player.position = Vector2(120, 120)
 	entities.add_child(player)
 	player.died.connect(_on_player_died)
 
 
+func _start_map(map_number: int) -> void:
+	current_map = map_number
+	GameState.current_map = map_number
+	level = LevelData.get_config(map_number)
+	map_points = 0
+	Frog.difficulty_scale = float(level["difficulty"])
+	_setup_background(str(level["background"]))
+	_layout_hud()
+
+	_clear_frogs()
+	freeze_timer = 0.0
+
+	spawn_interval = randf_range(0.3, 0.7)
+	spawn_timer = 0.0
+	yellow_spawn_timer = randf_range(4.0, 7.0)
+	blue_spawn_timer = randf_range(9.0, 12.0)
+	golden_spawn_timer = randf_range(14.0, 18.0)
+	strange_respawn_timer = randf_range(
+		float(level["strange_respawn_min"]),
+		float(level["strange_respawn_max"])
+	)
+
+	player.global_position = Vector2(120, 120)
+	_spawn_initial_frogs()
+	_update_hud()
+
+
+func _clear_frogs() -> void:
+	for frog in frogs:
+		if is_instance_valid(frog):
+			frog.queue_free()
+	frogs.clear()
+
+
 func _spawn_initial_frogs() -> void:
+	var screen := Screen.size()
 	var greens := [
-		Vector2(150, 180),
-		Vector2(350, 250),
-		Vector2(550, 180),
-		Vector2(250, 450),
+		Vector2(screen.x * 0.18, screen.y * 0.28),
+		Vector2(screen.x * 0.42, screen.y * 0.38),
+		Vector2(screen.x * 0.68, screen.y * 0.26),
+		Vector2(screen.x * 0.30, screen.y * 0.68),
+		Vector2(screen.x * 0.58, screen.y * 0.62),
 	]
 	for pos in greens:
 		_add_frog(pos, Frog.FrogType.GREEN)
 
-	_add_frog(Vector2(650, 450), Frog.FrogType.STRANGE)
-	_add_frog(Vector2(400, 120), Frog.FrogType.STRANGE)
+	_add_frog(Vector2(screen.x * 0.80, screen.y * 0.70), Frog.FrogType.STRANGE)
+	if int(level["max_strange"]) >= 2:
+		_add_frog(Vector2(screen.x * 0.52, screen.y * 0.16), Frog.FrogType.STRANGE)
+	if int(level["max_strange"]) >= 3:
+		_add_frog(Vector2(screen.x * 0.86, screen.y * 0.42), Frog.FrogType.STRANGE)
 
 
 func _add_frog(pos: Vector2, frog_type: Frog.FrogType) -> void:
@@ -175,7 +257,8 @@ func _try_catch_frog() -> void:
 
 			frogs.erase(frog)
 			frog.queue_free()
-			frogs_caught += points
+			map_points += points
+			total_points += points
 
 			if was_yellow:
 				player.apply_speed_boost()
@@ -188,7 +271,6 @@ func _try_catch_frog() -> void:
 
 
 func _check_enemy_contact() -> void:
-	# Congelados não causam dano.
 	for frog in frogs:
 		if not frog.is_enemy() or frog.frozen:
 			continue
@@ -201,27 +283,35 @@ func _check_enemy_contact() -> void:
 
 func _update_spawn(delta: float) -> void:
 	spawn_timer += delta
-	if frogs.size() <= MIN_FROGS and spawn_timer >= spawn_interval and frogs.size() < MAX_FROGS:
+	var min_frogs := int(level["min_frogs"])
+	var max_frogs := int(level["max_frogs"])
+	if frogs.size() <= min_frogs and spawn_timer >= spawn_interval and frogs.size() < max_frogs:
 		var new_pos := _find_spawn_position()
 		if new_pos != Vector2.INF:
-			# Spawn comum só repõe verdes; vermelhos têm timer próprio.
 			_add_frog(new_pos, Frog.FrogType.GREEN)
 			spawn_timer = 0.0
 			spawn_interval = randf_range(0.3, 0.7)
 
 
 func _update_strange_respawn(delta: float) -> void:
+	var max_strange := int(level["max_strange"])
 	var strange_count := _count_type(Frog.FrogType.STRANGE)
-	if strange_count >= MAX_STRANGE:
-		strange_respawn_timer = randf_range(STRANGE_RESPAWN_MIN, STRANGE_RESPAWN_MAX)
+	if strange_count >= max_strange:
+		strange_respawn_timer = randf_range(
+			float(level["strange_respawn_min"]),
+			float(level["strange_respawn_max"])
+		)
 		return
 
 	strange_respawn_timer -= delta
 	if strange_respawn_timer > 0.0:
 		return
 
-	strange_respawn_timer = randf_range(STRANGE_RESPAWN_MIN, STRANGE_RESPAWN_MAX)
-	if frogs.size() >= MAX_FROGS:
+	strange_respawn_timer = randf_range(
+		float(level["strange_respawn_min"]),
+		float(level["strange_respawn_max"])
+	)
+	if frogs.size() >= int(level["max_frogs"]):
 		return
 
 	var new_pos := _find_spawn_position()
@@ -234,21 +324,21 @@ func _update_bonus_spawns(delta: float) -> void:
 	blue_spawn_timer -= delta
 	golden_spawn_timer -= delta
 
-	if yellow_spawn_timer <= 0.0:
+	if bool(level["allow_yellow"]) and yellow_spawn_timer <= 0.0:
 		yellow_spawn_timer = randf_range(YELLOW_SPAWN_MIN, YELLOW_SPAWN_MAX)
 		_try_spawn_bonus(Frog.FrogType.YELLOW, MAX_YELLOW)
 
-	if blue_spawn_timer <= 0.0:
+	if bool(level["allow_blue"]) and blue_spawn_timer <= 0.0:
 		blue_spawn_timer = randf_range(BLUE_SPAWN_MIN, BLUE_SPAWN_MAX)
 		_try_spawn_bonus(Frog.FrogType.BLUE, MAX_BLUE)
 
-	if golden_spawn_timer <= 0.0:
+	if bool(level["allow_golden"]) and golden_spawn_timer <= 0.0:
 		golden_spawn_timer = randf_range(GOLDEN_SPAWN_MIN, GOLDEN_SPAWN_MAX)
 		_try_spawn_bonus(Frog.FrogType.GOLDEN, MAX_GOLDEN)
 
 
 func _try_spawn_bonus(type: Frog.FrogType, max_count: int) -> void:
-	if _count_type(type) >= max_count or frogs.size() >= MAX_FROGS:
+	if _count_type(type) >= max_count or frogs.size() >= int(level["max_frogs"]):
 		return
 	var new_pos := _find_spawn_position()
 	if new_pos != Vector2.INF:
@@ -256,14 +346,20 @@ func _try_spawn_bonus(type: Frog.FrogType, max_count: int) -> void:
 
 
 func _find_spawn_position() -> Vector2:
+	var screen := Screen.size()
+	var min_x := 60
+	var max_x := maxi(80, int(screen.x - 120.0))
+	var min_y := 60
+	var max_y := maxi(80, int(screen.y - 140.0))
+
 	for _i in range(100):
-		var pos := Vector2(randi_range(50, 700), randi_range(50, 480))
-		if player.global_position.distance_to(pos) < 150.0:
+		var pos := Vector2(randi_range(min_x, max_x), randi_range(min_y, max_y))
+		if player.global_position.distance_to(pos) < 160.0:
 			continue
 
 		var valid := true
 		for frog in frogs:
-			if frog.global_position.distance_to(pos) < 100.0:
+			if frog.global_position.distance_to(pos) < 110.0:
 				valid = false
 				break
 
@@ -274,19 +370,16 @@ func _find_spawn_position() -> Vector2:
 
 
 func _update_hud() -> void:
-	counter_label.text = str(frogs_caught)
+	var goal := int(level["goal"])
+	counter_label.text = str(total_points)
+	goal_label.text = "%d/%d" % [map_points, goal]
 	lives_label.text = "Vidas: %d" % player.lives
+	map_label.text = str(level["name"])
 
-	var remaining := maxf(0.0, GAME_DURATION_MS - game_time_ms)
-	var total_seconds := int(remaining / 1000.0)
-	var minutes := total_seconds / 60
-	var seconds := total_seconds % 60
-	timer_label.text = "%02d:%02d" % [minutes, seconds]
-
-	if remaining <= 10000.0:
-		timer_label.add_theme_color_override("font_color", Color(0.745, 0.216, 0.216))
+	if map_points >= goal:
+		goal_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
 	else:
-		timer_label.add_theme_color_override("font_color", Color.WHITE)
+		goal_label.add_theme_color_override("font_color", Color.WHITE)
 
 	if freeze_timer > 0.0:
 		boost_label.visible = true
@@ -331,6 +424,19 @@ func _update_prompt() -> void:
 		break
 
 
+func _on_map_cleared() -> void:
+	GameState.maps_cleared = current_map
+
+	if current_map >= LevelData.max_maps():
+		_finish_game(true)
+		return
+
+	transition_timer = 2.0
+	transition_label.text = "Mapa 2!\nOs sapinhos estão mais ágeis..."
+	transition_label.visible = true
+	_start_map(current_map + 1)
+
+
 func _on_player_died() -> void:
 	_finish_game(false)
 
@@ -340,9 +446,10 @@ func _finish_game(survived: bool) -> void:
 		return
 	finished = true
 
-	GameState.frogs_caught = frogs_caught
+	GameState.frogs_caught = total_points
 	GameState.game_time_ms = game_time_ms
 	GameState.lives_left = player.lives
 	GameState.survived = survived
+	GameState.current_map = current_map
 	music.stop()
 	get_tree().change_scene_to_file("res://scenes/end_game.tscn")

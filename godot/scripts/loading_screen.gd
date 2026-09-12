@@ -3,7 +3,7 @@ extends Control
 const DURATION := 8.0
 const MESSAGE_DELAY := 2.5
 const FROG_FRAME_DURATION := 0.15
-const FROG_SCALE := 0.35
+const FROG_SCALE := 0.45
 
 var messages := [
 	"Beatriz vai com ou sem falta porque ela não perde um bingo.",
@@ -47,6 +47,7 @@ func _ready() -> void:
 	_load_frog_walk()
 	if frog_textures.size() > 0:
 		frog_sprite.texture = frog_textures[0]
+		frog_sprite.position = Vector2(Screen.width() * 0.5, Screen.height() * 0.38)
 
 
 func _process(delta: float) -> void:

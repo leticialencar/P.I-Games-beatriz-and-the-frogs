@@ -37,9 +37,9 @@ Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 ### Estrutura
 
 ```
-godot/          → projeto Godot (código e cenas)
-assets/         → artes/sons (também copiados em godot/assets)
-PI-doc.pdf      → Game Design Document
+godot/                 → projeto Godot (código, cenas e assets)
+godot/assets/          → sprites, sons, fundos
+README.md
 ```
 
 <br>
