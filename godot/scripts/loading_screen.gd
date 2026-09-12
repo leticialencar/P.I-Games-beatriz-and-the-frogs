@@ -3,7 +3,7 @@ extends Control
 const DURATION := 8.0
 const MESSAGE_DELAY := 2.5
 const FROG_FRAME_DURATION := 0.15
-const FROG_SCALE := 0.35
+const FROG_SCALE := 0.45
 
 var messages := [
 	"Beatriz vai com ou sem falta porque ela não perde um bingo.",
@@ -29,7 +29,9 @@ var messages := [
 ]
 
 @onready var message_label: Label = $MessageLabel
-@onready var progress_bar: ProgressBar = $ProgressBar
+@onready var bar_track: ColorRect = $PixelBar/Track
+@onready var bar_fill: ColorRect = $PixelBar/Fill
+@onready var bar_fill_hi: ColorRect = $PixelBar/FillHighlight
 @onready var frog_sprite: Sprite2D = $FrogSprite
 
 var available_messages: Array = []
@@ -39,19 +41,25 @@ var frog_textures: Array[Texture2D] = []
 var frog_frame := 0
 var frog_timer := 0.0
 
+## Largura útil da barra (track), em pixels “duros”.
+const BAR_INNER_WIDTH := 412.0
+const BAR_STEP := 4.0
+
 
 func _ready() -> void:
 	available_messages = messages.duplicate()
 	available_messages.shuffle()
 	_show_next_message()
 	_load_frog_walk()
+	_set_bar_progress(0.0)
 	if frog_textures.size() > 0:
 		frog_sprite.texture = frog_textures[0]
+		frog_sprite.position = Vector2(Screen.width() * 0.5, Screen.height() * 0.38)
 
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	progress_bar.value = clampf(elapsed / DURATION * 100.0, 0.0, 100.0)
+	_set_bar_progress(clampf(elapsed / DURATION, 0.0, 1.0))
 
 	message_timer += delta
 	if message_timer >= MESSAGE_DELAY:
@@ -67,6 +75,13 @@ func _process(delta: float) -> void:
 
 	if elapsed >= DURATION:
 		get_tree().change_scene_to_file("res://scenes/game.tscn")
+
+
+func _set_bar_progress(ratio: float) -> void:
+	## Avança em blocos de 4px pra parecer pixel art, sem cantos arredondados.
+	var width := floorf((BAR_INNER_WIDTH * ratio) / BAR_STEP) * BAR_STEP
+	bar_fill.size = Vector2(width, bar_track.size.y)
+	bar_fill_hi.size = Vector2(width, 6.0)
 
 
 func _show_next_message() -> void:

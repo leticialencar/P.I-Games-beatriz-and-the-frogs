@@ -1,35 +1,51 @@
 extends Control
 
 @onready var background: TextureRect = $Background
-@onready var title_label: Label = $Panel/VBox/TitleLabel
-@onready var stats_label: Label = $Panel/VBox/StatsLabel
-@onready var bea_sprite: Sprite2D = $Panel/VBox/BeaHolder/BeaSprite
-@onready var replay_button: Button = $Panel/VBox/ReplayButton
-@onready var menu_button: Button = $Panel/VBox/MenuButton
-@onready var quit_button: Button = $Panel/VBox/QuitButton
+@onready var title_label: Label = $Center/Panel/Margin/VBox/TitleLabel
+@onready var stats_label: Label = $Center/Panel/Margin/VBox/StatsLabel
+@onready var bea_holder: Control = $Center/Panel/Margin/VBox/BeaHolder
+@onready var bea_sprite: Sprite2D = $Center/Panel/Margin/VBox/BeaHolder/BeaSprite
+@onready var replay_button: Button = $Center/Panel/Margin/VBox/ReplayButton
+@onready var menu_button: Button = $Center/Panel/Margin/VBox/MenuButton
+@onready var quit_button: Button = $Center/Panel/Margin/VBox/QuitButton
 
 var frames: Array[Texture2D] = []
 var current_frame := 0
 var frame_timer := 0.0
 const FRAME_DURATION := 0.18
+const BEA_SCALE := 0.42
 
 
 func _ready() -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	background.texture = load("res://assets/background/background.png")
 
 	var caught := GameState.frogs_caught
 	if not GameState.survived:
 		title_label.text = "Game Over"
 		_load_animation("res://assets/player/bea_sad.png")
-		stats_label.text = "As vidas acabaram!\nSapinhos pegos: %d" % caught
-	elif caught == 0:
-		title_label.text = "Nenhum sapinho..."
-		_load_animation("res://assets/player/bea_sad.png")
-		stats_label.text = "Sapinhos pegos: 0"
+		stats_label.text = "As vidas acabaram!\nPontos: %d\nParou no Mapa %d" % [
+			caught,
+			GameState.current_map,
+		]
+	elif GameState.party_visited:
+		title_label.text = "Festa completa!"
+		_load_animation("res://assets/player/bea_celebrate.png")
+		stats_label.text = "Bea encontrou a turma!\nPontos na caçada: %d\nVidas: %d" % [
+			caught,
+			GameState.lives_left,
+		]
+	elif GameState.maps_cleared >= 2:
+		title_label.text = "Chegou à festa!"
+		_load_animation("res://assets/player/bea_celebrate.png")
+		stats_label.text = "Mapas de caça concluídos!\nPontos: %d\nVidas: %d" % [
+			caught,
+			GameState.lives_left,
+		]
 	else:
 		title_label.text = "Missão cumprida!"
 		_load_animation("res://assets/player/bea_celebrate.png")
-		stats_label.text = "Sapinhos pegos: %d\nVidas restantes: %d" % [
+		stats_label.text = "Pontos: %d\nVidas restantes: %d" % [
 			caught,
 			GameState.lives_left,
 		]
@@ -38,6 +54,8 @@ func _ready() -> void:
 	menu_button.pressed.connect(_on_menu)
 	quit_button.pressed.connect(_on_quit)
 
+	await get_tree().process_frame
+	_center_bea()
 	if frames.size() > 0:
 		bea_sprite.texture = frames[0]
 
@@ -53,6 +71,10 @@ func _process(delta: float) -> void:
 		bea_sprite.texture = frames[current_frame]
 
 
+func _center_bea() -> void:
+	bea_sprite.position = Vector2(bea_holder.size.x * 0.5, bea_holder.size.y * 0.5)
+
+
 func _load_animation(path: String) -> void:
 	var sheet := load(path) as Texture2D
 	var frame_width := sheet.get_width() / 4
@@ -64,8 +86,8 @@ func _load_animation(path: String) -> void:
 		atlas.region = Rect2(i * frame_width, 0, frame_width, frame_height)
 		var image := atlas.get_image()
 		image.resize(
-			maxi(1, int(frame_width * 0.25)),
-			maxi(1, int(frame_height * 0.25)),
+			maxi(1, int(frame_width * BEA_SCALE)),
+			maxi(1, int(frame_height * BEA_SCALE)),
 			Image.INTERPOLATE_NEAREST
 		)
 		frames.append(ImageTexture.create_from_image(image))
