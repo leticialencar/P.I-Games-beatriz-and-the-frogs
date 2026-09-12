@@ -17,7 +17,8 @@ const BEA_SCALE := 0.42
 
 
 func _ready() -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if not OS.has_feature("web"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	background.texture = load("res://assets/background/background.png")
 
 	var caught := GameState.frogs_caught
