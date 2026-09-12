@@ -8,6 +8,7 @@ var lives_left: int = 3
 var survived: bool = true
 var current_map: int = 1
 var maps_cleared: int = 0
+var party_visited: bool = false
 
 
 func reset() -> void:
@@ -17,3 +18,4 @@ func reset() -> void:
 	survived = true
 	current_map = 1
 	maps_cleared = 0
+	party_visited = false

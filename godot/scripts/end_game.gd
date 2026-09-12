@@ -28,10 +28,17 @@ func _ready() -> void:
 			caught,
 			GameState.current_map,
 		]
-	elif GameState.maps_cleared >= 2:
-		title_label.text = "Chegou aos amigos!"
+	elif GameState.party_visited:
+		title_label.text = "Festa completa!"
 		_load_animation("res://assets/player/bea_celebrate.png")
-		stats_label.text = "Mapas concluídos!\nPontos: %d\nVidas: %d\n(Bingo em breve)" % [
+		stats_label.text = "Bea encontrou a turma!\nPontos na caçada: %d\nVidas: %d" % [
+			caught,
+			GameState.lives_left,
+		]
+	elif GameState.maps_cleared >= 2:
+		title_label.text = "Chegou à festa!"
+		_load_animation("res://assets/player/bea_celebrate.png")
+		stats_label.text = "Mapas de caça concluídos!\nPontos: %d\nVidas: %d" % [
 			caught,
 			GameState.lives_left,
 		]

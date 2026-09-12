@@ -471,13 +471,27 @@ func _on_map_cleared() -> void:
 	GameState.maps_cleared = current_map
 
 	if current_map >= LevelData.max_maps():
-		_finish_game(true)
+		_go_to_friends()
 		return
 
 	transition_timer = 2.0
 	transition_label.text = "Mapa 2!\nOs sapinhos estão mais ágeis..."
 	transition_label.visible = true
 	_start_map(current_map + 1)
+
+
+func _go_to_friends() -> void:
+	if finished:
+		return
+	finished = true
+	GameState.frogs_caught = total_points
+	GameState.game_time_ms = game_time_ms
+	GameState.lives_left = player.lives
+	GameState.survived = true
+	GameState.current_map = current_map
+	music.stop()
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/friends_scene.tscn")
 
 
 func _on_player_died() -> void:
