@@ -81,26 +81,30 @@ func _update_invulnerability(delta: float) -> void:
 
 func _handle_movement() -> void:
 	var input_vector := Vector2.ZERO
-	moving = false
 
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
-		input_vector.x = -1
-		direction = "side"
-		facing_right = false
-		moving = true
-	elif Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
-		input_vector.x = 1
-		direction = "side"
-		facing_right = true
-		moving = true
-	elif Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
-		input_vector.y = -1
-		direction = "back"
-		moving = true
-	elif Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
-		input_vector.y = 1
-		direction = "front"
-		moving = true
+		input_vector.x -= 1.0
+	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
+		input_vector.x += 1.0
+	if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
+		input_vector.y -= 1.0
+	if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
+		input_vector.y += 1.0
+
+	moving = input_vector != Vector2.ZERO
+
+	if moving:
+		# Normaliza para a diagonal não ficar mais rápida que o eixo puro.
+		input_vector = input_vector.normalized()
+
+		# Animação: prioriza o eixo dominante (empate → lado).
+		if absf(input_vector.x) >= absf(input_vector.y):
+			direction = "side"
+			facing_right = input_vector.x > 0.0
+		elif input_vector.y < 0.0:
+			direction = "back"
+		else:
+			direction = "front"
 
 	velocity = input_vector * BASE_SPEED * speed_multiplier
 

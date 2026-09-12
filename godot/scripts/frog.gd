@@ -1,7 +1,7 @@
 class_name Frog
 extends Node2D
 
-## Tipos do GDD — etapa 1: Verde (comum) e Estranho (inimigo).
+## Tipos do GDD — etapa atual: Verde (foge) e Estranho (persegue).
 enum FrogType { GREEN, STRANGE }
 
 const SCALE := 0.18
@@ -14,6 +14,15 @@ const VISION_RADIUS := 150.0
 const CONTACT_RADIUS := 42.0
 const PATROL_SPEED := 55.0
 const CHASE_SPEED := 110.0
+
+## Mapa 1: raio de fuga pequeno/médio (GDD).
+const GREEN_DETECT_RADIUS := 115.0
+const GREEN_PATROL_SPEED := 75.0
+const GREEN_FLEE_SPEED := 175.0
+const GREEN_HOP_TIME := 0.38
+const GREEN_PAUSE_MIN := 0.45
+const GREEN_PAUSE_MAX := 1.1
+const GREEN_FLEE_HOP_TIME := 0.28
 
 @onready var sprite: Sprite2D = $Sprite2D
 
@@ -33,6 +42,7 @@ var move_dir := Vector2.RIGHT
 var moving := false
 var action_playing := false
 var chasing := false
+var fleeing := false
 
 var state_timer := 0.0
 var state_duration := 0.0
@@ -48,7 +58,7 @@ func setup(type: FrogType, player_ref: Player) -> void:
 		speed = PATROL_SPEED
 	else:
 		modulate = Color.WHITE
-		speed = 60.0
+		speed = GREEN_PATROL_SPEED
 
 
 func is_catchable() -> bool:
@@ -60,15 +70,15 @@ func is_enemy() -> bool:
 
 
 func get_center() -> Vector2:
-	if sprite.texture == null:
+	if sprite == null or sprite.texture == null:
 		return global_position
 	return global_position + sprite.texture.get_size() * 0.5
 
 
 func _ready() -> void:
 	_load_sprites()
-	move_dir = Vector2([-1.0, 1.0].pick_random(), 0.0)
-	state_duration = randf_range(1.0, 3.0)
+	move_dir = _random_dir()
+	state_duration = randf_range(GREEN_PAUSE_MIN, GREEN_PAUSE_MAX)
 	action_timer = randf_range(4.0, 8.0)
 	if idle_textures.size() > 0:
 		sprite.texture = idle_textures[0]
@@ -99,7 +109,7 @@ func _process_strange(delta: float) -> void:
 			moving = not moving
 			state_duration = randf_range(1.0, 2.5)
 			if moving:
-				move_dir = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)).normalized()
+				move_dir = _random_dir()
 				walk_frame = 0
 			else:
 				idle_frame = 0
@@ -118,12 +128,36 @@ func _process_strange(delta: float) -> void:
 
 
 func _process_green(delta: float) -> void:
+	fleeing = false
+
+	if player != null and is_instance_valid(player):
+		var away: Vector2 = get_center() - player.get_center()
+		var distance: float = away.length()
+		if distance <= GREEN_DETECT_RADIUS and distance > 0.1:
+			fleeing = true
+			# Vetor oposto à Bea + leve variação para não travar em linha reta.
+			var flee_dir: Vector2 = away.normalized()
+			var side: Vector2 = Vector2(-flee_dir.y, flee_dir.x) * randf_range(-0.35, 0.35)
+			move_dir = (flee_dir + side).normalized()
+			speed = GREEN_FLEE_SPEED
+			moving = true
+			action_playing = false
+
+	if fleeing:
+		position += move_dir * speed * delta
+		_clamp_to_screen()
+		_advance_walk(delta)
+		sprite.texture = walk_textures[walk_frame]
+		sprite.flip_h = move_dir.x < 0.0
+		return
+
+	# Longe da Bea: saltos aleatórios com pausas (GDD).
 	if action_playing:
 		_update_action(delta)
 		return
 
 	action_timer -= delta
-	if action_timer <= 0.0:
+	if action_timer <= 0.0 and not moving:
 		action_playing = true
 		action_frame = 0
 		animation_timer = 0.0
@@ -133,15 +167,17 @@ func _process_green(delta: float) -> void:
 	if state_timer >= state_duration:
 		state_timer = 0.0
 		moving = not moving
-		state_duration = randf_range(1.0, 3.0)
 		if moving:
-			move_dir = Vector2([-1.0, 1.0].pick_random(), 0.0)
+			move_dir = _random_dir()
+			speed = GREEN_PATROL_SPEED
+			state_duration = GREEN_HOP_TIME
 			walk_frame = 0
 		else:
 			idle_frame = 0
+			state_duration = randf_range(GREEN_PAUSE_MIN, GREEN_PAUSE_MAX)
 
 	if moving:
-		position.x += speed * move_dir.x * delta
+		position += move_dir * speed * delta
 		_clamp_to_screen()
 		_advance_walk(delta)
 		sprite.texture = walk_textures[walk_frame]
@@ -150,6 +186,13 @@ func _process_green(delta: float) -> void:
 		_advance_idle(delta)
 		sprite.texture = idle_textures[idle_frame]
 		sprite.flip_h = false
+
+
+func _random_dir() -> Vector2:
+	var dir := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0))
+	if dir.length_squared() < 0.01:
+		return Vector2.RIGHT
+	return dir.normalized()
 
 
 func _clamp_to_screen() -> void:
