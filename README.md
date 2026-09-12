@@ -30,7 +30,7 @@ Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 |------|--------|
 | Mover | WASD / setas |
 | Capturar | E / Espaço |
-| Pausar | Esc *(em breve)* |
+| Pausar | Esc |
 
 <br>
 

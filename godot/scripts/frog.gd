@@ -204,8 +204,7 @@ func _process_strange(delta: float) -> void:
 		speed = PATROL_SPEED
 
 	if moving:
-		position += move_dir * speed * delta
-		_clamp_to_screen()
+		_try_move(speed * delta)
 		_advance_walk(delta)
 		sprite.texture = walk_textures[walk_frame]
 		sprite.flip_h = move_dir.x < 0.0
@@ -234,8 +233,7 @@ func _process_golden(delta: float) -> void:
 		speed = GOLDEN_PATROL_SPEED
 
 	moving = true
-	position += move_dir * speed * delta
-	_clamp_to_screen()
+	_try_move(speed * delta)
 	_advance_walk(delta)
 	sprite.texture = walk_textures[walk_frame]
 	sprite.flip_h = move_dir.x < 0.0
@@ -273,8 +271,7 @@ func _process_fleeing_frog(delta: float) -> void:
 			action_playing = false
 
 	if fleeing:
-		position += move_dir * speed * delta
-		_clamp_to_screen()
+		_try_move(speed * delta)
 		_advance_walk(delta)
 		sprite.texture = walk_textures[walk_frame]
 		sprite.flip_h = move_dir.x < 0.0
@@ -305,8 +302,7 @@ func _process_fleeing_frog(delta: float) -> void:
 			state_duration = randf_range(GREEN_PAUSE_MIN, GREEN_PAUSE_MAX)
 
 	if moving:
-		position += move_dir * speed * delta
-		_clamp_to_screen()
+		_try_move(speed * delta)
 		_advance_walk(delta)
 		sprite.texture = walk_textures[walk_frame]
 		sprite.flip_h = move_dir.x < 0.0
@@ -321,6 +317,36 @@ func _random_dir() -> Vector2:
 	if dir.length_squared() < 0.01:
 		return Vector2.RIGHT
 	return dir.normalized()
+
+
+func _try_move(distance: float) -> void:
+	var next := position + move_dir * distance
+	var body := _body_rect_at(next)
+	if _collides_with_obstacle(body):
+		# Tenta desviar: inverte e escolhe outro ângulo.
+		move_dir = -move_dir
+		next = position + move_dir * distance * 0.5
+		if _collides_with_obstacle(_body_rect_at(next)):
+			move_dir = _random_dir()
+			return
+	position = next
+	_clamp_to_screen()
+
+
+func _body_rect_at(pos: Vector2) -> Rect2:
+	var size := Vector2(40, 32)
+	if sprite != null and sprite.texture != null:
+		size = sprite.texture.get_size() * 0.7
+	return Rect2(pos + size * 0.15, size)
+
+
+func _collides_with_obstacle(rect: Rect2) -> bool:
+	if not is_inside_tree():
+		return false
+	for node in get_tree().get_nodes_in_group("obstacles"):
+		if node.has_method("get_blocking_rect") and rect.intersects(node.get_blocking_rect()):
+			return true
+	return false
 
 
 func _clamp_to_screen() -> void:

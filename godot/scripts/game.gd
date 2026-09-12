@@ -15,9 +15,11 @@ const GOLDEN_SPAWN_MAX := 24.0
 
 const FrogScene := preload("res://scenes/frog.tscn")
 const PlayerScene := preload("res://scenes/player.tscn")
+const ObstacleScene := preload("res://scenes/obstacle.tscn")
 
 @onready var background: Sprite2D = $Background
 @onready var entities: Node2D = $Entities
+@onready var obstacles_root: Node2D = $Obstacles
 @onready var counter_label: Label = $HUD/CounterPanel/CounterLabel
 @onready var goal_label: Label = $HUD/TimerPanel/TimerLabel
 @onready var lives_label: Label = $HUD/LivesPanel/LivesLabel
@@ -83,6 +85,10 @@ func _process(delta: float) -> void:
 
 	if map_points >= int(level["goal"]):
 		_on_map_cleared()
+
+
+func can_pause() -> bool:
+	return not finished and transition_timer <= 0.0
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -156,6 +162,7 @@ func _start_map(map_number: int) -> void:
 	_layout_hud()
 
 	_clear_frogs()
+	_spawn_obstacles()
 	freeze_timer = 0.0
 
 	spawn_interval = randf_range(0.3, 0.7)
@@ -180,6 +187,21 @@ func _clear_frogs() -> void:
 	frogs.clear()
 
 
+func _clear_obstacles() -> void:
+	for child in obstacles_root.get_children():
+		child.queue_free()
+
+
+func _spawn_obstacles() -> void:
+	_clear_obstacles()
+	var rects := LevelData.obstacle_rects_for(current_map, Screen.size())
+	for rect in rects:
+		var obstacle := ObstacleScene.instantiate() as Obstacle
+		obstacles_root.add_child(obstacle)
+		obstacle.setup(rect)
+		obstacle.add_to_group("obstacles")
+
+
 func _spawn_initial_frogs() -> void:
 	var screen := Screen.size()
 	var greens := [
@@ -190,13 +212,25 @@ func _spawn_initial_frogs() -> void:
 		Vector2(screen.x * 0.58, screen.y * 0.62),
 	]
 	for pos in greens:
+		if _hits_obstacle(Rect2(pos, Vector2(50, 40))):
+			pos = _find_spawn_position()
+			if pos == Vector2.INF:
+				continue
 		_add_frog(pos, Frog.FrogType.GREEN)
 
-	_add_frog(Vector2(screen.x * 0.80, screen.y * 0.70), Frog.FrogType.STRANGE)
-	if int(level["max_strange"]) >= 2:
-		_add_frog(Vector2(screen.x * 0.52, screen.y * 0.16), Frog.FrogType.STRANGE)
-	if int(level["max_strange"]) >= 3:
-		_add_frog(Vector2(screen.x * 0.86, screen.y * 0.42), Frog.FrogType.STRANGE)
+	var strange_spots := [
+		Vector2(screen.x * 0.80, screen.y * 0.70),
+		Vector2(screen.x * 0.52, screen.y * 0.16),
+		Vector2(screen.x * 0.86, screen.y * 0.42),
+	]
+	var strange_needed := int(level["max_strange"])
+	for i in range(mini(strange_needed, strange_spots.size())):
+		var pos: Vector2 = strange_spots[i]
+		if _hits_obstacle(Rect2(pos, Vector2(50, 40))):
+			pos = _find_spawn_position()
+			if pos == Vector2.INF:
+				continue
+		_add_frog(pos, Frog.FrogType.STRANGE)
 
 
 func _add_frog(pos: Vector2, frog_type: Frog.FrogType) -> void:
@@ -356,6 +390,8 @@ func _find_spawn_position() -> Vector2:
 		var pos := Vector2(randi_range(min_x, max_x), randi_range(min_y, max_y))
 		if player.global_position.distance_to(pos) < 160.0:
 			continue
+		if _hits_obstacle(Rect2(pos, Vector2(50, 40))):
+			continue
 
 		var valid := true
 		for frog in frogs:
@@ -367,6 +403,13 @@ func _find_spawn_position() -> Vector2:
 			return pos
 
 	return Vector2.INF
+
+
+func _hits_obstacle(rect: Rect2) -> bool:
+	for node in get_tree().get_nodes_in_group("obstacles"):
+		if node.has_method("get_blocking_rect") and rect.intersects(node.get_blocking_rect()):
+			return true
+	return false
 
 
 func _update_hud() -> void:
@@ -452,4 +495,5 @@ func _finish_game(survived: bool) -> void:
 	GameState.survived = survived
 	GameState.current_map = current_map
 	music.stop()
+	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/end_game.tscn")

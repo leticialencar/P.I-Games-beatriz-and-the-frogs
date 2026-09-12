@@ -48,7 +48,6 @@ func _physics_process(delta: float) -> void:
 	_handle_movement()
 	_update_animation(delta)
 	_update_sprite()
-	move_and_slide()
 
 
 func get_center() -> Vector2:
@@ -141,6 +140,7 @@ func _handle_movement() -> void:
 			direction = "front"
 
 	velocity = input_vector * BASE_SPEED * speed_multiplier
+	move_and_slide()
 
 	var screen := Screen.size()
 	global_position.x = clampf(global_position.x, 0.0, screen.x - DISPLAY_SIZE.x)
