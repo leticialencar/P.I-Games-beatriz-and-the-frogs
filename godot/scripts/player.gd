@@ -9,6 +9,8 @@ const DISPLAY_SIZE := Vector2(100, 109)
 const FRAME_DURATION := 0.15
 const MAX_LIVES := 3
 const INVULN_DURATION := 1.5
+const SPEED_BOOST_MULT := 1.5
+const SPEED_BOOST_DURATION := 5.0
 
 @onready var sprite: Sprite2D = $Sprite2D
 
@@ -16,6 +18,7 @@ var direction := "front"
 var facing_right := true
 var moving := false
 var speed_multiplier := 1.0
+var speed_boost_timer := 0.0
 
 var lives := MAX_LIVES
 var invulnerable := false
@@ -39,6 +42,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_speed_boost(delta)
 	_update_invulnerability(delta)
 	_handle_movement()
 	_update_animation(delta)
@@ -48,6 +52,35 @@ func _physics_process(delta: float) -> void:
 
 func get_center() -> Vector2:
 	return global_position + DISPLAY_SIZE * 0.5
+
+
+func has_speed_boost() -> bool:
+	return speed_boost_timer > 0.0
+
+
+func apply_speed_boost(duration: float = SPEED_BOOST_DURATION) -> void:
+	speed_boost_timer = duration
+	speed_multiplier = SPEED_BOOST_MULT
+
+
+func _update_speed_boost(delta: float) -> void:
+	if speed_boost_timer <= 0.0:
+		speed_multiplier = 1.0
+		if not invulnerable:
+			sprite.modulate = Color.WHITE
+		return
+
+	speed_boost_timer -= delta
+	speed_multiplier = SPEED_BOOST_MULT
+	# Tom amarelo leve enquanto o bônus estiver ativo.
+	if not invulnerable:
+		sprite.modulate = Color(1.15, 1.05, 0.55, 1.0)
+
+	if speed_boost_timer <= 0.0:
+		speed_boost_timer = 0.0
+		speed_multiplier = 1.0
+		if not invulnerable:
+			sprite.modulate = Color.WHITE
 
 
 func take_damage() -> bool:

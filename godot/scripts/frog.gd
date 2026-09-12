@@ -1,8 +1,8 @@
 class_name Frog
 extends Node2D
 
-## Tipos do GDD — etapa atual: Verde (foge) e Estranho (persegue).
-enum FrogType { GREEN, STRANGE }
+## Tipos do GDD.
+enum FrogType { GREEN, YELLOW, BLUE, GOLDEN, STRANGE }
 
 const SCALE := 0.18
 const WALK_FRAME_DURATION := 0.15
@@ -10,24 +10,45 @@ const ACTION_FRAME_DURATION := 0.15
 const IDLE_FRAME_DURATIONS := [2.0, 0.5, 0.8, 1.2]
 
 const STRANGE_TINT := Color(0.9, 0.2, 0.35, 1.0)
+const YELLOW_TINT := Color(1.15, 0.95, 0.25, 1.0)
+const BLUE_TINT := Color(0.35, 0.7, 1.15, 1.0)
+const GOLDEN_TINT := Color(1.2, 0.85, 0.15, 1.0)
+const FROZEN_TINT := Color(0.55, 0.85, 1.2, 1.0)
+
 const VISION_RADIUS := 150.0
 const CONTACT_RADIUS := 42.0
 const PATROL_SPEED := 55.0
 const CHASE_SPEED := 110.0
 
-## Mapa 1: raio de fuga pequeno/médio (GDD).
 const GREEN_DETECT_RADIUS := 115.0
 const GREEN_PATROL_SPEED := 75.0
 const GREEN_FLEE_SPEED := 175.0
 const GREEN_HOP_TIME := 0.38
 const GREEN_PAUSE_MIN := 0.45
 const GREEN_PAUSE_MAX := 1.1
-const GREEN_FLEE_HOP_TIME := 0.28
+
+const YELLOW_DETECT_RADIUS := 130.0
+const YELLOW_PATROL_SPEED := 120.0
+const YELLOW_FLEE_SPEED := 220.0
+const YELLOW_LIFETIME := 12.0
+
+const BLUE_DETECT_RADIUS := 100.0
+const BLUE_PATROL_SPEED := 40.0
+const BLUE_FLEE_SPEED := 70.0
+const BLUE_LIFETIME := 14.0
+
+const GOLDEN_DETECT_RADIUS := 150.0
+const GOLDEN_PATROL_SPEED := 180.0
+const GOLDEN_FLEE_SPEED := 260.0
+const GOLDEN_LIFETIME := 5.0
+const GOLDEN_DIR_CHANGE := 0.25
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 var frog_type: FrogType = FrogType.GREEN
 var player: Player = null
+var base_modulate := Color.WHITE
+var frozen := false
 
 var idle_textures: Array[Texture2D] = []
 var walk_textures: Array[Texture2D] = []
@@ -48,25 +69,74 @@ var state_timer := 0.0
 var state_duration := 0.0
 var action_timer := 0.0
 var speed := PATROL_SPEED
+var lifetime := -1.0
+var expired := false
+var golden_dir_timer := 0.0
 
 
 func setup(type: FrogType, player_ref: Player) -> void:
 	frog_type = type
 	player = player_ref
-	if frog_type == FrogType.STRANGE:
-		modulate = STRANGE_TINT
-		speed = PATROL_SPEED
-	else:
-		modulate = Color.WHITE
-		speed = GREEN_PATROL_SPEED
+	match frog_type:
+		FrogType.STRANGE:
+			base_modulate = STRANGE_TINT
+			speed = PATROL_SPEED
+			lifetime = -1.0
+		FrogType.YELLOW:
+			base_modulate = YELLOW_TINT
+			speed = YELLOW_PATROL_SPEED
+			lifetime = YELLOW_LIFETIME
+		FrogType.BLUE:
+			base_modulate = BLUE_TINT
+			speed = BLUE_PATROL_SPEED
+			lifetime = BLUE_LIFETIME
+		FrogType.GOLDEN:
+			base_modulate = GOLDEN_TINT
+			speed = GOLDEN_PATROL_SPEED
+			lifetime = GOLDEN_LIFETIME
+		_:
+			base_modulate = Color.WHITE
+			speed = GREEN_PATROL_SPEED
+			lifetime = -1.0
+	modulate = base_modulate
 
 
 func is_catchable() -> bool:
-	return frog_type == FrogType.GREEN
+	if frog_type == FrogType.STRANGE:
+		return frozen
+	return frog_type in [FrogType.GREEN, FrogType.YELLOW, FrogType.BLUE, FrogType.GOLDEN]
 
 
 func is_enemy() -> bool:
 	return frog_type == FrogType.STRANGE
+
+
+func is_yellow() -> bool:
+	return frog_type == FrogType.YELLOW
+
+
+func is_blue() -> bool:
+	return frog_type == FrogType.BLUE
+
+
+func is_golden() -> bool:
+	return frog_type == FrogType.GOLDEN
+
+
+func get_score_value() -> int:
+	return 3 if frog_type == FrogType.GOLDEN else 1
+
+
+func set_frozen(value: bool) -> void:
+	frozen = value
+	if frozen:
+		modulate = FROZEN_TINT
+		moving = false
+		chasing = false
+		fleeing = false
+		action_playing = false
+	else:
+		modulate = base_modulate
 
 
 func get_center() -> Vector2:
@@ -85,10 +155,24 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if lifetime > 0.0:
+		lifetime -= delta
+		if lifetime <= 0.0:
+			expired = true
+			return
+
+	if frozen:
+		_advance_idle(delta)
+		if idle_textures.size() > 0:
+			sprite.texture = idle_textures[idle_frame]
+		return
+
 	if frog_type == FrogType.STRANGE:
 		_process_strange(delta)
+	elif frog_type == FrogType.GOLDEN:
+		_process_golden(delta)
 	else:
-		_process_green(delta)
+		_process_fleeing_frog(delta)
 
 
 func _process_strange(delta: float) -> void:
@@ -127,19 +211,60 @@ func _process_strange(delta: float) -> void:
 		sprite.flip_h = false
 
 
-func _process_green(delta: float) -> void:
+func _process_golden(delta: float) -> void:
+	# Movimento errático e muito rápido (GDD).
+	fleeing = false
+	golden_dir_timer -= delta
+
+	if player != null and is_instance_valid(player):
+		var away: Vector2 = get_center() - player.get_center()
+		var distance: float = away.length()
+		if distance <= GOLDEN_DETECT_RADIUS and distance > 0.1:
+			fleeing = true
+			move_dir = away.normalized()
+			speed = GOLDEN_FLEE_SPEED
+
+	if not fleeing and golden_dir_timer <= 0.0:
+		golden_dir_timer = GOLDEN_DIR_CHANGE
+		move_dir = _random_dir()
+		speed = GOLDEN_PATROL_SPEED
+
+	moving = true
+	position += move_dir * speed * delta
+	_clamp_to_screen()
+	_advance_walk(delta)
+	sprite.texture = walk_textures[walk_frame]
+	sprite.flip_h = move_dir.x < 0.0
+
+
+func _process_fleeing_frog(delta: float) -> void:
+	var detect_radius := GREEN_DETECT_RADIUS
+	var patrol_speed := GREEN_PATROL_SPEED
+	var flee_speed := GREEN_FLEE_SPEED
+
+	match frog_type:
+		FrogType.YELLOW:
+			detect_radius = YELLOW_DETECT_RADIUS
+			patrol_speed = YELLOW_PATROL_SPEED
+			flee_speed = YELLOW_FLEE_SPEED
+		FrogType.BLUE:
+			detect_radius = BLUE_DETECT_RADIUS
+			patrol_speed = BLUE_PATROL_SPEED
+			flee_speed = BLUE_FLEE_SPEED
+		_:
+			pass
+
 	fleeing = false
 
 	if player != null and is_instance_valid(player):
 		var away: Vector2 = get_center() - player.get_center()
 		var distance: float = away.length()
-		if distance <= GREEN_DETECT_RADIUS and distance > 0.1:
+		if distance <= detect_radius and distance > 0.1:
 			fleeing = true
-			# Vetor oposto à Bea + leve variação para não travar em linha reta.
 			var flee_dir: Vector2 = away.normalized()
 			var side: Vector2 = Vector2(-flee_dir.y, flee_dir.x) * randf_range(-0.35, 0.35)
 			move_dir = (flee_dir + side).normalized()
-			speed = GREEN_FLEE_SPEED
+			speed = flee_speed
 			moving = true
 			action_playing = false
 
@@ -151,7 +276,6 @@ func _process_green(delta: float) -> void:
 		sprite.flip_h = move_dir.x < 0.0
 		return
 
-	# Longe da Bea: saltos aleatórios com pausas (GDD).
 	if action_playing:
 		_update_action(delta)
 		return
@@ -169,7 +293,7 @@ func _process_green(delta: float) -> void:
 		moving = not moving
 		if moving:
 			move_dir = _random_dir()
-			speed = GREEN_PATROL_SPEED
+			speed = patrol_speed
 			state_duration = GREEN_HOP_TIME
 			walk_frame = 0
 		else:
