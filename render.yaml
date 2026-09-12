@@ -1,0 +1,13 @@
+# Render Static Site — Beatriz e os Sapinhos (HTML5 / desktop browser)
+# 1. Faça push do branch com a pasta build/web
+# 2. No Render: New > Static Site > este repositório
+# 3. Publish Directory: build/web
+
+services:
+  - type: web
+    name: beatriz-and-the-frogs
+    runtime: static
+    plan: free
+    branch: upgrade-game
+    buildCommand: "true"
+    staticPublishPath: build/web

@@ -14,3 +14,9 @@ Thumbs.db
 __pycache__/
 .venv/
 *.pyc
+
+# Export tooling (pesado) — o build web publicado fica versionado
+build/godot_editor/
+build/godot_templates/
+build/export_log.txt
+/tmp/

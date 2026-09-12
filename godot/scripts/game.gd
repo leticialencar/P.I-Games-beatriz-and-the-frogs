@@ -56,7 +56,8 @@ var map_loading_active := false
 
 
 func _ready() -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if not OS.has_feature("web"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	GameState.reset()
 	_spawn_player()
 	_layout_hud()

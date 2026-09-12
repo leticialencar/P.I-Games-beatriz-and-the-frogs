@@ -20,7 +20,8 @@ var dialogue_timer := 0.0
 
 
 func _ready() -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if not OS.has_feature("web"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	GameState.current_map = 3
 	GameState.maps_cleared = maxi(GameState.maps_cleared, 2)
 
