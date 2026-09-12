@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bahi6yh3buogl"
-path="res://.godot/imported/background.png-af8116bd94e27df8cdb7b0ec54dd4e56.ctex"
+uid="uid://ccyv03sbw64mh"
+path="res://.godot/imported/friend_gabriel.png-53af65ff68b8e82547cdef789369eec5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/background/background.png"
-dest_files=["res://.godot/imported/background.png-af8116bd94e27df8cdb7b0ec54dd4e56.ctex"]
+source_file="res://assets/friends/friend_gabriel.png"
+dest_files=["res://.godot/imported/friend_gabriel.png-53af65ff68b8e82547cdef789369eec5.ctex"]
 
 [params]
 

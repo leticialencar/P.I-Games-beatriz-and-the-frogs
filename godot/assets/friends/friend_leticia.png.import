@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bahi6yh3buogl"
-path="res://.godot/imported/background.png-af8116bd94e27df8cdb7b0ec54dd4e56.ctex"
+uid="uid://compykwmim1mu"
+path="res://.godot/imported/friend_leticia.png-aa8e1034f0c82f1a72dc73b580b331c9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/background/background.png"
-dest_files=["res://.godot/imported/background.png-af8116bd94e27df8cdb7b0ec54dd4e56.ctex"]
+source_file="res://assets/friends/friend_leticia.png"
+dest_files=["res://.godot/imported/friend_leticia.png-aa8e1034f0c82f1a72dc73b580b331c9.ctex"]
 
 [params]
 
