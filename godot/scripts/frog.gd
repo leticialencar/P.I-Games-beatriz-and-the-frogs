@@ -1,11 +1,15 @@
 class_name Frog
 extends Node2D
 
-## Tipos do GDD.
-enum FrogType { GREEN, YELLOW, BLUE, GOLDEN, STRANGE }
+## Tipos do GDD (+ Sapão Preto no mapa 3).
+enum FrogType { GREEN, YELLOW, BLUE, GOLDEN, STRANGE, BOSS }
 
 ## Escala confortável (o 0.36 ficou gigante no mapa atual).
 const SCALE := 0.22
+const BOSS_SCALE := 0.95
+const BOSS_CONTACT_RADIUS := 78.0
+const BOSS_CHASE_SPEED := 95.0
+const BOSS_VISION := 9999.0
 const WALK_FRAME_DURATION := 0.15
 const ACTION_FRAME_DURATION := 0.15
 const IDLE_FRAME_DURATIONS := [2.0, 0.5, 0.8, 1.2]
@@ -76,6 +80,10 @@ var speed := PATROL_SPEED
 var lifetime := -1.0
 var expired := false
 var golden_dir_timer := 0.0
+var boss_hp := 12
+var boss_max_hp := 12
+var hit_flash := 0.0
+signal boss_defeated
 
 
 func setup(type: FrogType, player_ref: Player) -> void:
@@ -98,6 +106,10 @@ func setup(type: FrogType, player_ref: Player) -> void:
 			base_modulate = GOLDEN_TINT
 			speed = GOLDEN_PATROL_SPEED
 			lifetime = GOLDEN_LIFETIME
+		FrogType.BOSS:
+			base_modulate = Color.WHITE
+			speed = BOSS_CHASE_SPEED
+			lifetime = -1.0
 		_:
 			base_modulate = Color.WHITE
 			speed = GREEN_PATROL_SPEED
@@ -105,14 +117,26 @@ func setup(type: FrogType, player_ref: Player) -> void:
 	modulate = base_modulate
 
 
+func setup_boss(player_ref: Player, hp: int) -> void:
+	setup(FrogType.BOSS, player_ref)
+	boss_hp = hp
+	boss_max_hp = hp
+
+
 func is_catchable() -> bool:
+	if frog_type == FrogType.BOSS:
+		return false
 	if frog_type == FrogType.STRANGE:
 		return frozen
 	return frog_type in [FrogType.GREEN, FrogType.YELLOW, FrogType.BLUE, FrogType.GOLDEN]
 
 
 func is_enemy() -> bool:
-	return frog_type == FrogType.STRANGE
+	return frog_type == FrogType.STRANGE or frog_type == FrogType.BOSS
+
+
+func is_boss() -> bool:
+	return frog_type == FrogType.BOSS
 
 
 func is_yellow() -> bool:
@@ -151,6 +175,8 @@ func get_center() -> Vector2:
 
 func _ready() -> void:
 	_load_sprites()
+	if frog_type == FrogType.BOSS:
+		_apply_boss_look()
 	move_dir = _random_dir()
 	state_duration = randf_range(GREEN_PAUSE_MIN, GREEN_PAUSE_MAX)
 	action_timer = randf_range(4.0, 8.0)
@@ -171,12 +197,60 @@ func _process(delta: float) -> void:
 			sprite.texture = idle_textures[idle_frame]
 		return
 
-	if frog_type == FrogType.STRANGE:
+	if frog_type == FrogType.BOSS:
+		_process_boss(delta)
+	elif frog_type == FrogType.STRANGE:
 		_process_strange(delta)
 	elif frog_type == FrogType.GOLDEN:
 		_process_golden(delta)
 	else:
 		_process_fleeing_frog(delta)
+
+
+func _process_boss(delta: float) -> void:
+	if hit_flash > 0.0:
+		hit_flash -= delta
+		modulate = Color(1.5, 0.35, 0.35, 1.0) if hit_flash > 0.0 else base_modulate
+
+	chasing = false
+	if player != null and is_instance_valid(player):
+		var to_player: Vector2 = player.get_center() - get_center()
+		var distance: float = to_player.length()
+		if distance > 0.1:
+			chasing = true
+			move_dir = to_player.normalized()
+			speed = BOSS_CHASE_SPEED * difficulty_scale
+			moving = true
+
+	if moving:
+		_try_move(speed * delta)
+		_advance_walk(delta)
+		if walk_textures.size() > 0:
+			sprite.texture = walk_textures[walk_frame]
+		sprite.flip_h = move_dir.x < 0.0
+
+
+func take_hit(damage: int = 1) -> bool:
+	if frog_type != FrogType.BOSS or expired:
+		return false
+	boss_hp = maxi(0, boss_hp - damage)
+	hit_flash = 0.12
+	if boss_hp <= 0:
+		expired = true
+		boss_defeated.emit()
+		return true
+	return false
+
+
+func _apply_boss_look() -> void:
+	var tex := load("res://assets/frog/frog_boss_black.png") as Texture2D
+	if tex == null:
+		return
+	idle_textures = [tex]
+	walk_textures = [tex, tex]
+	action_textures = [tex]
+	sprite.texture = tex
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
 func _process_strange(delta: float) -> void:
@@ -350,8 +424,9 @@ func _collides_with_obstacle(rect: Rect2) -> bool:
 
 
 func _clamp_to_screen() -> void:
-	var max_x: float = Screen.width() - 70.0
-	var max_y: float = Screen.height() - 90.0
+	var pad := 90.0 if frog_type == FrogType.BOSS else 70.0
+	var max_x: float = Screen.width() - pad
+	var max_y: float = Screen.height() - (110.0 if frog_type == FrogType.BOSS else 90.0)
 	position.x = clampf(position.x, 0.0, max_x)
 	position.y = clampf(position.y, 0.0, max_y)
 	if position.x <= 0.0 or position.x >= max_x:

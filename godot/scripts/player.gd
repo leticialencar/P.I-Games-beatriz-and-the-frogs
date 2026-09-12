@@ -25,6 +25,9 @@ var lives := MAX_LIVES
 var invulnerable := false
 var invuln_timer := 0.0
 var flash_timer := 0.0
+var has_gun := false
+var shoot_cooldown := 0.0
+const SHOOT_COOLDOWN := 0.28
 
 var current_frame := 0
 var animation_timer := 0.0
@@ -45,9 +48,29 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_update_speed_boost(delta)
 	_update_invulnerability(delta)
+	if shoot_cooldown > 0.0:
+		shoot_cooldown -= delta
 	_handle_movement()
 	_update_animation(delta)
 	_update_sprite()
+
+
+func get_aim_direction() -> Vector2:
+	match direction:
+		"side":
+			return Vector2.RIGHT if facing_right else Vector2.LEFT
+		"back":
+			return Vector2.UP
+		_:
+			return Vector2.DOWN
+
+
+func can_shoot() -> bool:
+	return has_gun and shoot_cooldown <= 0.0
+
+
+func mark_shot() -> void:
+	shoot_cooldown = SHOOT_COOLDOWN
 
 
 func get_center() -> Vector2:

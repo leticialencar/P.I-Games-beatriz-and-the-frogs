@@ -16,6 +16,7 @@ const GOLDEN_SPAWN_MAX := 24.0
 const FrogScene := preload("res://scenes/frog.tscn")
 const PlayerScene := preload("res://scenes/player.tscn")
 const ObstacleScene := preload("res://scenes/obstacle.tscn")
+const BulletScript := preload("res://scripts/bullet.gd")
 
 @onready var background: Sprite2D = $Background
 @onready var entities: Node2D = $Entities
@@ -28,6 +29,9 @@ const ObstacleScene := preload("res://scenes/obstacle.tscn")
 @onready var prompt_label: Label = $HUD/PromptLabel
 @onready var transition_label: Label = $HUD/TransitionLabel
 @onready var music: AudioStreamPlayer = $Music
+@onready var map_loading: CanvasLayer = $MapLoading
+@onready var map_load_label: Label = $MapLoading/Center/LoadLabel
+@onready var map_bar_fill: ColorRect = $MapLoading/Center/BarBorder/BarFill
 
 var player: Player
 var frogs: Array[Frog] = []
@@ -45,6 +49,10 @@ var strange_respawn_timer := 0.0
 var freeze_timer := 0.0
 var transition_timer := 0.0
 var finished := false
+var bullets: Array = []
+var boss_frog: Frog = null
+var boss_cleared := false
+var map_loading_active := false
 
 
 func _ready() -> void:
@@ -55,6 +63,7 @@ func _ready() -> void:
 	_start_map(1)
 	boost_label.visible = false
 	transition_label.visible = false
+	map_loading.visible = false
 	music.play()
 	get_viewport().size_changed.connect(_on_viewport_resized)
 
@@ -68,6 +77,9 @@ func _process(delta: float) -> void:
 	if finished:
 		return
 
+	if map_loading_active:
+		return
+
 	if transition_timer > 0.0:
 		transition_timer -= delta
 		transition_label.visible = transition_timer > 0.0
@@ -76,19 +88,27 @@ func _process(delta: float) -> void:
 	game_time_ms += delta * 1000.0
 	_update_freeze(delta)
 	_cleanup_expired_frogs()
-	_update_spawn(delta)
-	_update_bonus_spawns(delta)
-	_update_strange_respawn(delta)
+	_update_bullets(delta)
+	if not bool(level.get("boss_map", false)):
+		_update_spawn(delta)
+		_update_bonus_spawns(delta)
+		_update_strange_respawn(delta)
+	else:
+		# Só respawn dos vermelhos — sem sapinhos pegáveis.
+		_update_strange_respawn(delta)
 	_check_enemy_contact()
 	_update_hud()
 	_update_prompt()
 
-	if map_points >= int(level["goal"]):
+	if bool(level.get("boss_map", false)):
+		if boss_cleared:
+			_on_map_cleared()
+	elif map_points >= int(level["goal"]):
 		_on_map_cleared()
 
 
 func can_pause() -> bool:
-	return not finished and transition_timer <= 0.0
+	return not finished and transition_timer <= 0.0 and not map_loading_active
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -97,11 +117,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_fullscreen()
 			return
 
-	if finished or transition_timer > 0.0:
+	if finished or transition_timer > 0.0 or map_loading_active:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if bool(level.get("boss_map", false)):
+			_try_shoot()
+		else:
+			_try_catch_frog()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F or event.keycode == KEY_J:
+			_try_shoot()
+			return
 		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
-			_try_catch_frog()
+			if bool(level.get("boss_map", false)):
+				_try_shoot()
+			else:
+				_try_catch_frog()
 
 
 func _toggle_fullscreen() -> void:
@@ -157,6 +189,9 @@ func _start_map(map_number: int) -> void:
 	GameState.current_map = map_number
 	level = LevelData.get_config(map_number)
 	map_points = 0
+	boss_cleared = false
+	boss_frog = null
+	_clear_bullets()
 	Frog.difficulty_scale = float(level["difficulty"])
 	_setup_background(str(level["background"]))
 	_layout_hud()
@@ -176,6 +211,7 @@ func _start_map(map_number: int) -> void:
 	)
 
 	player.global_position = Vector2(120, 120)
+	player.has_gun = bool(level.get("boss_map", false))
 	_spawn_initial_frogs()
 	_update_hud()
 
@@ -204,6 +240,27 @@ func _spawn_obstacles() -> void:
 
 func _spawn_initial_frogs() -> void:
 	var screen := Screen.size()
+
+	if bool(level.get("boss_map", false)):
+		var boss := FrogScene.instantiate() as Frog
+		boss.position = Vector2(screen.x * 0.62, screen.y * 0.38)
+		boss.setup_boss(player, int(level.get("boss_hp", 12)))
+		if freeze_timer > 0.0:
+			boss.set_frozen(true)
+		entities.add_child(boss)
+		frogs.append(boss)
+		boss_frog = boss
+		# Só vermelhos pra atormentar — zero sapinhos pra pegar.
+		var strange_spots := [
+			Vector2(screen.x * 0.22, screen.y * 0.55),
+			Vector2(screen.x * 0.78, screen.y * 0.68),
+			Vector2(screen.x * 0.50, screen.y * 0.22),
+		]
+		var strange_needed := int(level["max_strange"])
+		for i in range(mini(strange_needed, strange_spots.size())):
+			_add_frog(strange_spots[i], Frog.FrogType.STRANGE)
+		return
+
 	var greens := [
 		Vector2(screen.x * 0.18, screen.y * 0.28),
 		Vector2(screen.x * 0.42, screen.y * 0.38),
@@ -309,10 +366,53 @@ func _check_enemy_contact() -> void:
 		if not frog.is_enemy() or frog.frozen:
 			continue
 
+		var radius := Frog.BOSS_CONTACT_RADIUS if frog.is_boss() else Frog.CONTACT_RADIUS
 		var distance: float = player.get_center().distance_to(frog.get_center())
-		if distance < Frog.CONTACT_RADIUS:
+		if distance < radius:
 			player.take_damage()
 			break
+
+
+func _try_shoot() -> void:
+	if player == null or not player.can_shoot():
+		return
+	player.mark_shot()
+	var bullet := Node2D.new()
+	bullet.set_script(BulletScript)
+	entities.add_child(bullet)
+	bullet.setup(player.get_center(), player.get_aim_direction())
+	bullets.append(bullet)
+
+
+func _clear_bullets() -> void:
+	for b in bullets:
+		if is_instance_valid(b):
+			b.queue_free()
+	bullets.clear()
+
+
+func _update_bullets(_delta: float) -> void:
+	var alive: Array = []
+	for b in bullets:
+		if not is_instance_valid(b) or b.spent:
+			continue
+		var hit := false
+		for frog in frogs:
+			if not frog.is_boss() or frog.expired:
+				continue
+			if b.global_position.distance_to(frog.get_center()) <= Bullet.HIT_RADIUS + 40.0:
+				frog.take_hit(1)
+				b.spent = true
+				b.queue_free()
+				hit = true
+				if frog.expired:
+					boss_cleared = true
+					total_points += 10
+					map_points = 1
+				break
+		if not hit:
+			alive.append(b)
+	bullets = alive
 
 
 func _update_spawn(delta: float) -> void:
@@ -413,12 +513,24 @@ func _hits_obstacle(rect: Rect2) -> bool:
 
 
 func _update_hud() -> void:
-	var goal := int(level["goal"])
 	counter_label.text = str(total_points)
-	goal_label.text = "%d/%d" % [map_points, goal]
 	lives_label.text = "Vidas: %d" % player.lives
 	map_label.text = str(level["name"])
 
+	if bool(level.get("boss_map", false)):
+		if boss_frog != null and is_instance_valid(boss_frog) and not boss_frog.expired:
+			goal_label.text = "HP %d/%d" % [boss_frog.boss_hp, boss_frog.boss_max_hp]
+			goal_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
+			boost_label.visible = true
+			boost_label.text = "Atirar: F / clique  |  Sem pegar!"
+			boost_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		else:
+			goal_label.text = "DERROTADO!"
+			goal_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+		return
+
+	var goal := int(level["goal"])
+	goal_label.text = "%d/%d" % [map_points, goal]
 	if map_points >= goal:
 		goal_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
 	else:
@@ -438,9 +550,20 @@ func _update_hud() -> void:
 
 func _update_prompt() -> void:
 	prompt_label.visible = false
+	if bool(level.get("boss_map", false)) and boss_frog != null and is_instance_valid(boss_frog) and not boss_frog.expired:
+		var dist: float = player.get_center().distance_to(boss_frog.get_center())
+		if dist < 160.0:
+			prompt_label.visible = true
+			prompt_label.global_position = boss_frog.global_position + Vector2(-30, -40)
+			prompt_label.text = "Atire! F"
+			prompt_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+			return
+
 	for frog in frogs:
 		var distance: float = player.get_center().distance_to(frog.get_center())
 		if distance >= CATCH_DISTANCE:
+			continue
+		if frog.is_boss():
 			continue
 
 		prompt_label.visible = true
@@ -468,16 +591,53 @@ func _update_prompt() -> void:
 
 
 func _on_map_cleared() -> void:
+	if finished or transition_timer > 0.0 or map_loading_active:
+		return
+
 	GameState.maps_cleared = current_map
 
 	if current_map >= LevelData.max_maps():
 		_go_to_friends()
 		return
 
-	transition_timer = 2.0
-	transition_label.text = "Mapa 2!\nOs sapinhos estão mais ágeis..."
-	transition_label.visible = true
-	_start_map(current_map + 1)
+	var next_map := current_map + 1
+	var title := "Carregando Mapa 2..."
+	var blurb := "Os sapinhos estão mais ágeis..."
+	if current_map == 2:
+		title = "Carregando Mapa 3..."
+		blurb = "O Sapão Preto apareceu...\nBea pegou uma arma!"
+	_load_next_map(next_map, title, blurb)
+
+
+func _set_map_load_progress(ratio: float) -> void:
+	var width := floorf((412.0 * clampf(ratio, 0.0, 1.0)) / 4.0) * 4.0
+	map_bar_fill.size = Vector2(width, 20.0)
+
+
+func _load_next_map(next_map: int, title: String, blurb: String) -> void:
+	map_loading_active = true
+	map_loading.visible = true
+	map_load_label.text = "%s\n%s" % [title, blurb]
+	_set_map_load_progress(0.0)
+	prompt_label.visible = false
+	transition_label.visible = false
+
+	# Mostra a barra e só depois monta o mapa (hitch fica “escondido”).
+	for i in range(8):
+		_set_map_load_progress(float(i) / 12.0)
+		await get_tree().process_frame
+
+	_start_map(next_map)
+
+	for i in range(8, 13):
+		_set_map_load_progress(float(i) / 12.0)
+		await get_tree().process_frame
+		await get_tree().create_timer(0.05).timeout
+
+	_set_map_load_progress(1.0)
+	await get_tree().create_timer(0.15).timeout
+	map_loading.visible = false
+	map_loading_active = false
 
 
 func _go_to_friends() -> void:
@@ -489,6 +649,17 @@ func _go_to_friends() -> void:
 	GameState.lives_left = player.lives
 	GameState.survived = true
 	GameState.current_map = current_map
+
+	map_loading_active = true
+	map_loading.visible = true
+	map_load_label.text = "Indo para a festa..."
+	_set_map_load_progress(0.2)
+	await get_tree().process_frame
+	_set_map_load_progress(0.7)
+	await get_tree().create_timer(0.35).timeout
+	_set_map_load_progress(1.0)
+	await get_tree().create_timer(0.15).timeout
+
 	music.stop()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/friends_scene.tscn")

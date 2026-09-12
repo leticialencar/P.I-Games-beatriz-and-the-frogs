@@ -23,7 +23,7 @@ theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.2, 0.25, 0.12, 1)
 theme_override_constants/outline_size = 5
-text = "Mapa 3 — Festa dos amigos"
+text = "Festa dos amigos"
 horizontal_alignment = 1
 
 [node name="HintLabel" type="Label" parent="HUD"]

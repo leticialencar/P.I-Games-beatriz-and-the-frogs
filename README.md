@@ -14,7 +14,7 @@
 Beatriz precisa percorrer mapas, capturar sapinhos e superar desafios para encontrar seus amigos e jogar bingo.  
 Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 
-**Progressão:** Mapa 1 → Mapa 2 → Mapa 3 (festa / conversar com amigos)
+**Progressão:** Mapa 1 → Mapa 2 → Mapa 3 (Sapão Preto) → Festa
 
 <br>
 
@@ -31,7 +31,8 @@ Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 | Ação | Tecla |
 |------|--------|
 | Mover | WASD / setas |
-| Capturar | E / Espaço |
+| Capturar | E / Espaço / clique esquerdo |
+| Atirar (mapa 3) | F / J / clique esquerdo |
 | Pausar | Esc |
 
 <br>
