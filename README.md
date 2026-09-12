@@ -26,6 +26,27 @@ Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 
 <br>
 
+### Testar no navegador (amigos / desktop)
+
+O jogo já tem export **HTML5** em [`build/web/`](build/web/).
+
+**Local:**
+```bash
+cd build/web && python3 -m http.server 8080
+```
+Abra `http://localhost:8080`
+
+**Render (Static Site):**
+1. Push deste branch no GitHub
+2. Em [render.com](https://render.com) → **New → Static Site**
+3. Conecte o repositório
+4. **Publish Directory:** `build/web`
+5. Deploy → compartilhe o link com a turma
+
+Há também um [`render.yaml`](render.yaml) pronto. Para gerar o export de novo: `bash scripts/export_web.sh`
+
+<br>
+
 ### Controles
 
 | Ação | Tecla |

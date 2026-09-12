@@ -20,7 +20,8 @@ var showing_lore := false
 
 
 func _ready() -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if not OS.has_feature("web"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	background.texture = load("res://assets/background/background.png")
 	logo.texture = load("res://assets/ui/frog_hunt_logo.png")
 	lore_label.text = LORE_TEXT
