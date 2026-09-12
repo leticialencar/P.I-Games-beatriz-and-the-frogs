@@ -1,32 +1,46 @@
 <p align="center">
-    A small 2D game developed with Python and Pygame.
+    <strong>Beatriz e os Sapinhos</strong><br>
+    Jogo 2D de aventura e exploração — Godot 4
 </p>
 
 <p align="center">
-    🚧 <strong>Work in Progress</strong>
+    🚧 <strong>Em desenvolvimento</strong>
 </p>
 
 <br>
 
-### About
+### Sobre
 
-**Frog Hunt!** is a small personal project created as a way to learn and practice game development with Python and Pygame. <br>
-The game is currently under development.
-
-<br>
-
-### Tech Stack
-
-* Python
-* Pygame
+Beatriz precisa percorrer mapas, capturar sapinhos e superar desafios para encontrar seus amigos e jogar bingo.  
+Desenvolvido para o Projeto Integrador (Unifap) com a **Godot Engine 4**.
 
 <br>
 
-### About the Game
+### Como rodar
 
-Frog Hunt! is a simple 2D game where the player controls a young girl on a mission to find and catch a frog.
+1. Instale o [Godot 4](https://godotengine.org) (ou `sudo snap install godot-4`)
+2. Abra a pasta [`godot/`](godot/) no editor
+3. Aperte **F5** (Play)
 
-The game was created as a personal learning project, with a focus on practicing basic concepts of game development, such as player movement, animations, collisions, sprites and game logic.
+<br>
+
+### Controles
+
+| Ação | Tecla |
+|------|--------|
+| Mover | WASD / setas |
+| Capturar | E / Espaço |
+| Pausar | Esc *(em breve)* |
+
+<br>
+
+### Estrutura
+
+```
+godot/          → projeto Godot (código e cenas)
+assets/         → artes/sons (também copiados em godot/assets)
+PI-doc.pdf      → Game Design Document
+```
 
 <br>
 
@@ -34,6 +48,6 @@ The game was created as a personal learning project, with a focus on practicing 
 
 <div align="center">
 
-Made with 💚 by **Letícia Alencar**
+Equipe do PI — Unifap, 2026
 
 </div>
