@@ -18,6 +18,9 @@ const PlayerScene := preload("res://scenes/player.tscn")
 const ObstacleScene := preload("res://scenes/obstacle.tscn")
 const BulletScript := preload("res://scripts/bullet.gd")
 
+## Apresentação: festa/conversa oculta (inacabada). Volte para true depois.
+const SHOW_FRIENDS_SCENE := false
+
 @onready var background: Sprite2D = $Background
 @onready var entities: Node2D = $Entities
 @onready var obstacles_root: Node2D = $Obstacles
@@ -598,7 +601,10 @@ func _on_map_cleared() -> void:
 	GameState.maps_cleared = current_map
 
 	if current_map >= LevelData.max_maps():
-		_go_to_friends()
+		if SHOW_FRIENDS_SCENE:
+			_go_to_friends()
+		else:
+			_finish_game(true)
 		return
 
 	var next_map := current_map + 1
