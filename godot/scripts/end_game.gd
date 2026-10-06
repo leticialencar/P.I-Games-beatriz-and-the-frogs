@@ -36,10 +36,17 @@ func _ready() -> void:
 			caught,
 			GameState.lives_left,
 		]
-	elif GameState.maps_cleared >= 2:
-		title_label.text = "Chegou à festa!"
+	elif GameState.maps_cleared >= LevelData.max_maps():
+		title_label.text = "Vitória!"
 		_load_animation("res://assets/player/bea_celebrate.png")
-		stats_label.text = "Mapas de caça concluídos!\nPontos: %d\nVidas: %d" % [
+		stats_label.text = "Sapão Preto derrotado!\nPontos: %d\nVidas: %d" % [
+			caught,
+			GameState.lives_left,
+		]
+	elif GameState.maps_cleared >= 2:
+		title_label.text = "Missão cumprida!"
+		_load_animation("res://assets/player/bea_celebrate.png")
+		stats_label.text = "Mapas concluídos!\nPontos: %d\nVidas: %d" % [
 			caught,
 			GameState.lives_left,
 		]
