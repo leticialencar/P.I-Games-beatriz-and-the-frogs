@@ -102,10 +102,12 @@ func _load_animation(path: String) -> void:
 
 
 func _on_replay() -> void:
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	# Mantém o modo atual (história vs ranking).
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 
 
 func _on_menu() -> void:
+	GameState.ranking_mode = false
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
