@@ -152,7 +152,15 @@ func is_golden() -> bool:
 
 
 func get_score_value() -> int:
-	return 3 if frog_type == FrogType.GOLDEN else 1
+	match frog_type:
+		FrogType.GOLDEN:
+			return 5
+		FrogType.YELLOW, FrogType.BLUE:
+			return 2
+		FrogType.STRANGE:
+			return 3
+		_:
+			return 1
 
 
 func set_frozen(value: bool) -> void:

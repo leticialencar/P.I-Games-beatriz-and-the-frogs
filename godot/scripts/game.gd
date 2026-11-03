@@ -17,9 +17,15 @@ const FrogScene := preload("res://scenes/frog.tscn")
 const PlayerScene := preload("res://scenes/player.tscn")
 const ObstacleScene := preload("res://scenes/obstacle.tscn")
 const BulletScript := preload("res://scripts/bullet.gd")
+const CROSSHAIR_PATH := "res://assets/ui/crosshair_cursor.png"
+const CROSSHAIR_HOTSPOT := Vector2(32, 32)
 
 ## Apresentação: festa/conversa oculta (inacabada). Volte para true depois.
 const SHOW_FRIENDS_SCENE := false
+
+## Ranking: sobe a dificuldade a cada N segundos.
+const RANKING_WAVE_SECONDS := 15.0
+const RANKING_COMBO_WINDOW := 2.5
 
 @onready var background: Sprite2D = $Background
 @onready var entities: Node2D = $Entities
@@ -56,15 +62,25 @@ var bullets: Array = []
 var boss_frog: Frog = null
 var boss_cleared := false
 var map_loading_active := false
+var ranking_mode := false
+var ranking_wave := 1
+var ranking_wave_timer := 0.0
+var combo := 0
+var combo_timer := 0.0
 
 
 func _ready() -> void:
 	if not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	ranking_mode = GameState.ranking_mode
 	GameState.reset()
+	GameState.ranking_mode = ranking_mode
 	_spawn_player()
 	_layout_hud()
-	_start_map(1)
+	if ranking_mode:
+		_start_ranking()
+	else:
+		_start_map(1)
 	boost_label.visible = false
 	transition_label.visible = false
 	map_loading.visible = false
@@ -90,20 +106,34 @@ func _process(delta: float) -> void:
 		return
 
 	game_time_ms += delta * 1000.0
+	if combo_timer > 0.0:
+		combo_timer -= delta
+		if combo_timer <= 0.0:
+			combo = 0
+
 	_update_freeze(delta)
 	_cleanup_expired_frogs()
 	_update_bullets(delta)
-	if not bool(level.get("boss_map", false)):
+
+	if ranking_mode:
+		_update_ranking_wave(delta)
+		_update_spawn(delta)
+		_update_bonus_spawns(delta)
+		_update_strange_respawn(delta)
+	elif not bool(level.get("boss_map", false)):
 		_update_spawn(delta)
 		_update_bonus_spawns(delta)
 		_update_strange_respawn(delta)
 	else:
 		# Só respawn dos vermelhos — sem sapinhos pegáveis.
 		_update_strange_respawn(delta)
+
 	_check_enemy_contact()
 	_update_hud()
 	_update_prompt()
 
+	if ranking_mode:
+		return
 	if bool(level.get("boss_map", false)):
 		if boss_cleared:
 			_on_map_cleared()
@@ -124,18 +154,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if finished or transition_timer > 0.0 or map_loading_active:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if bool(level.get("boss_map", false)):
-			_try_shoot()
+		if (not ranking_mode) and bool(level.get("boss_map", false)):
+			_try_shoot(get_global_mouse_position())
 		else:
 			_try_catch_frog()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F or event.keycode == KEY_J:
-			_try_shoot()
+			if (not ranking_mode) and bool(level.get("boss_map", false)):
+				_try_shoot(get_global_mouse_position())
 			return
 		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
-			if bool(level.get("boss_map", false)):
-				_try_shoot()
+			if (not ranking_mode) and bool(level.get("boss_map", false)):
+				_try_shoot(get_global_mouse_position())
 			else:
 				_try_catch_frog()
 
@@ -154,8 +185,8 @@ func _layout_hud() -> void:
 	$HUD/LivesPanel.position = Vector2(screen.x * 0.5 - 70.0, 16)
 	$HUD/TimerPanel.position = Vector2(screen.x - 156.0, 16)
 
-	map_label.position = Vector2(screen.x * 0.5 - 150.0, screen.y - 48.0)
-	map_label.size = Vector2(300, 30)
+	map_label.position = Vector2(screen.x * 0.5 - 200.0, screen.y - 48.0)
+	map_label.size = Vector2(400, 30)
 
 	boost_label.position = Vector2(screen.x * 0.5 - 150.0, 110)
 	boost_label.size = Vector2(300, 30)
@@ -188,6 +219,79 @@ func _spawn_player() -> void:
 	player.died.connect(_on_player_died)
 
 
+func _ranking_level_config(wave: int) -> Dictionary:
+	var strange := mini(1 + (wave - 1) / 2, 4)
+	return {
+		"name": "Ranking",
+		"goal": 999999,
+		"boss_map": false,
+		"max_strange": strange,
+		"max_frogs": mini(7 + wave, 12),
+		"min_frogs": 3,
+		"difficulty": 1.0 + (wave - 1) * 0.12,
+		"allow_yellow": true,
+		"allow_blue": wave >= 2,
+		"allow_golden": wave >= 4,
+		"strange_respawn_min": maxf(3.0, 8.0 - wave * 0.4),
+		"strange_respawn_max": maxf(5.0, 11.0 - wave * 0.4),
+		"background": "res://assets/background/background.png",
+		"obstacles": [
+			{"x": 0.30, "y": 0.40, "w": 0.10, "h": 0.07},
+			{"x": 0.62, "y": 0.55, "w": 0.11, "h": 0.07},
+		],
+	}
+
+
+func _start_ranking() -> void:
+	ranking_wave = 1
+	ranking_wave_timer = 0.0
+	combo = 0
+	combo_timer = 0.0
+	total_points = 0
+	map_points = 0
+	current_map = 0
+	GameState.current_map = 0
+	GameState.ranking_wave = 1
+	level = _ranking_level_config(ranking_wave)
+	boss_cleared = false
+	boss_frog = null
+	_clear_bullets()
+	Frog.difficulty_scale = float(level["difficulty"])
+	_setup_background(str(level["background"]))
+	_layout_hud()
+	_clear_frogs()
+	_spawn_obstacles()
+	freeze_timer = 0.0
+	spawn_interval = randf_range(0.3, 0.7)
+	spawn_timer = 0.0
+	yellow_spawn_timer = randf_range(4.0, 7.0)
+	blue_spawn_timer = randf_range(9.0, 12.0)
+	golden_spawn_timer = randf_range(14.0, 18.0)
+	strange_respawn_timer = randf_range(
+		float(level["strange_respawn_min"]),
+		float(level["strange_respawn_max"])
+	)
+	player.global_position = Vector2(120, 120)
+	player.has_gun = false
+	_set_aim_cursor(false)
+	_spawn_initial_frogs()
+	_update_hud()
+
+
+func _update_ranking_wave(delta: float) -> void:
+	ranking_wave_timer += delta
+	if ranking_wave_timer < RANKING_WAVE_SECONDS:
+		return
+	ranking_wave_timer = 0.0
+	ranking_wave += 1
+	GameState.ranking_wave = ranking_wave
+	level = _ranking_level_config(ranking_wave)
+	Frog.difficulty_scale = float(level["difficulty"])
+	boost_label.visible = true
+	boost_label.text = "Mais sapos! Mais rápido!"
+	boost_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))
+
+
 func _start_map(map_number: int) -> void:
 	current_map = map_number
 	GameState.current_map = map_number
@@ -216,8 +320,20 @@ func _start_map(map_number: int) -> void:
 
 	player.global_position = Vector2(120, 120)
 	player.has_gun = bool(level.get("boss_map", false))
+	_set_aim_cursor(player.has_gun)
 	_spawn_initial_frogs()
 	_update_hud()
+
+
+func _set_aim_cursor(enabled: bool) -> void:
+	if enabled:
+		var tex := load(CROSSHAIR_PATH) as Texture2D
+		if tex != null:
+			Input.set_custom_mouse_cursor(tex, Input.CURSOR_ARROW, CROSSHAIR_HOTSPOT)
+		else:
+			Input.set_custom_mouse_cursor(null)
+	else:
+		Input.set_custom_mouse_cursor(null)
 
 
 func _clear_frogs() -> void:
@@ -346,14 +462,25 @@ func _try_catch_frog() -> void:
 
 		var distance: float = player.get_center().distance_to(frog.get_center())
 		if distance < CATCH_DISTANCE:
-			var points := frog.get_score_value()
+			var base_points := frog.get_score_value()
 			var was_yellow := frog.is_yellow()
 			var was_blue := frog.is_blue()
 
 			frogs.erase(frog)
 			frog.queue_free()
-			map_points += points
-			total_points += points
+
+			if ranking_mode:
+				if combo_timer > 0.0:
+					combo += 1
+				else:
+					combo = 1
+				combo_timer = RANKING_COMBO_WINDOW
+				var points := base_points * maxi(1, combo)
+				map_points += points
+				total_points += points
+			else:
+				map_points += base_points
+				total_points += base_points
 
 			if was_yellow:
 				player.apply_speed_boost()
@@ -377,14 +504,17 @@ func _check_enemy_contact() -> void:
 			break
 
 
-func _try_shoot() -> void:
+func _try_shoot(aim_at: Vector2) -> void:
 	if player == null or not player.can_shoot():
 		return
+	var dir: Vector2 = aim_at - player.get_center()
+	if dir.length_squared() < 16.0:
+		dir = player.get_aim_direction()
 	player.mark_shot()
 	var bullet := Node2D.new()
 	bullet.set_script(BulletScript)
 	entities.add_child(bullet)
-	bullet.setup(player.get_center(), player.get_aim_direction())
+	bullet.setup(player.get_center(), dir)
 	bullets.append(bullet)
 
 
@@ -401,6 +531,12 @@ func _update_bullets(_delta: float) -> void:
 		if not is_instance_valid(b) or b.spent:
 			continue
 		var hit := false
+		# Pedras bloqueiam o tiro.
+		var bullet_box := Rect2(b.global_position - Vector2(8, 8), Vector2(16, 16))
+		if _hits_obstacle(bullet_box):
+			b.spent = true
+			b.queue_free()
+			continue
 		for frog in frogs:
 			if not frog.is_boss() or frog.expired:
 				continue
@@ -516,9 +652,39 @@ func _hits_obstacle(rect: Rect2) -> bool:
 	return false
 
 
+func _format_clock(ms: float) -> String:
+	var total_sec := int(ms / 1000.0)
+	return "%02d:%02d" % [total_sec / 60, total_sec % 60]
+
+
 func _update_hud() -> void:
 	counter_label.text = str(total_points)
 	lives_label.text = "Vidas: %d" % player.lives
+
+	if ranking_mode:
+		map_label.text = "RANKING"
+		goal_label.text = _format_clock(game_time_ms)
+		goal_label.add_theme_color_override("font_color", Color.WHITE)
+		if freeze_timer > 0.0:
+			boost_label.visible = true
+			boost_label.text = "Congelado! %.0fs" % ceilf(freeze_timer)
+			boost_label.add_theme_color_override("font_color", Color(0.45, 0.8, 1.0))
+		elif player.has_speed_boost():
+			boost_label.visible = true
+			boost_label.text = "Velocidade! %.0fs" % ceilf(player.speed_boost_timer)
+			boost_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.25))
+		elif combo > 1:
+			boost_label.visible = true
+			boost_label.text = "Combo x%d!" % combo
+			boost_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.2))
+		elif ranking_wave_timer < 1.6 and ranking_wave > 1:
+			boost_label.visible = true
+			boost_label.text = "Mais sapos! Mais rápido!"
+			boost_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))
+		else:
+			boost_label.visible = false
+		return
+
 	map_label.text = str(level["name"])
 
 	if bool(level.get("boss_map", false)):
@@ -526,7 +692,7 @@ func _update_hud() -> void:
 			goal_label.text = "HP %d/%d" % [boss_frog.boss_hp, boss_frog.boss_max_hp]
 			goal_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
 			boost_label.visible = true
-			boost_label.text = "Atirar: F / clique  |  Sem pegar!"
+			boost_label.text = "Clique para atirar (mira livre)"
 			boost_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 		else:
 			goal_label.text = "DERROTADO!"
@@ -559,7 +725,7 @@ func _update_prompt() -> void:
 		if dist < 160.0:
 			prompt_label.visible = true
 			prompt_label.global_position = boss_frog.global_position + Vector2(-30, -40)
-			prompt_label.text = "Atire! F"
+			prompt_label.text = "Clique nele!"
 			prompt_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 			return
 
@@ -651,6 +817,7 @@ func _go_to_friends() -> void:
 	if finished:
 		return
 	finished = true
+	_set_aim_cursor(false)
 	GameState.frogs_caught = total_points
 	GameState.game_time_ms = game_time_ms
 	GameState.lives_left = player.lives
@@ -676,16 +843,31 @@ func _on_player_died() -> void:
 	_finish_game(false)
 
 
+func _exit_tree() -> void:
+	_set_aim_cursor(false)
+
+
 func _finish_game(survived: bool) -> void:
 	if finished:
 		return
 	finished = true
+	_set_aim_cursor(false)
 
 	GameState.frogs_caught = total_points
 	GameState.game_time_ms = game_time_ms
 	GameState.lives_left = player.lives
 	GameState.survived = survived
 	GameState.current_map = current_map
+	GameState.ranking_score = total_points
+	GameState.ranking_wave = ranking_wave
 	music.stop()
 	get_tree().paused = false
+
+	if ranking_mode:
+		if GameState.qualifies_for_board(total_points):
+			get_tree().change_scene_to_file("res://scenes/name_entry.tscn")
+		else:
+			get_tree().change_scene_to_file("res://scenes/leaderboard.tscn")
+		return
+
 	get_tree().change_scene_to_file("res://scenes/end_game.tscn")
