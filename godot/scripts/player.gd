@@ -9,7 +9,7 @@ const FRAME_SIZE := Vector2(200, 218)
 const DISPLAY_SIZE := Vector2(112, 122)
 const FRAME_DURATION := 0.15
 const MAX_LIVES := 3
-const INVULN_DURATION := 1.5
+const INVULN_DURATION := 2.0
 const SPEED_BOOST_MULT := 1.5
 const SPEED_BOOST_DURATION := 5.0
 

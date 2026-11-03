@@ -53,8 +53,10 @@ Há também um [`render.yaml`](render.yaml) pronto. Para gerar o export de novo:
 |------|--------|
 | Mover | WASD / setas |
 | Capturar | E / Espaço / clique esquerdo |
-| Atirar (mapa 3) | F / J / clique esquerdo |
+| Atirar (mapa 3) | Clique onde quiser mirar (diagonal ok) |
 | Pausar | Esc |
+
+**Modos:** História (mapas) · Ranking (endless + placar top 10)
 
 <br>
 

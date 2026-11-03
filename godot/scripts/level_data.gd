@@ -2,6 +2,7 @@ class_name LevelData
 extends RefCounted
 
 ## Configuração por mapa + layouts de obstáculos (frações da tela).
+## Balanceado mais leve para apresentação / jogadores novos.
 
 
 static func get_config(map_number: int) -> Dictionary:
@@ -9,69 +10,63 @@ static func get_config(map_number: int) -> Dictionary:
 		1:
 			return {
 				"name": "Mapa 1",
-				"goal": 8,
+				"goal": 6,
 				"boss_map": false,
-				"max_strange": 2,
-				"max_frogs": 8,
+				"max_strange": 1,
+				"max_frogs": 7,
 				"min_frogs": 3,
-				"difficulty": 1.0,
+				"difficulty": 0.85,
 				"allow_yellow": true,
 				"allow_blue": false,
 				"allow_golden": false,
-				"strange_respawn_min": 7.0,
-				"strange_respawn_max": 11.0,
+				"strange_respawn_min": 10.0,
+				"strange_respawn_max": 14.0,
 				"background": "res://assets/background/background.png",
 				"obstacles": [
-					{"x": 0.28, "y": 0.34, "w": 0.10, "h": 0.07},
-					{"x": 0.58, "y": 0.48, "w": 0.12, "h": 0.08},
-					{"x": 0.42, "y": 0.68, "w": 0.11, "h": 0.07},
+					{"x": 0.32, "y": 0.42, "w": 0.10, "h": 0.07},
+					{"x": 0.58, "y": 0.58, "w": 0.10, "h": 0.07},
 				],
 			}
 		2:
 			return {
 				"name": "Mapa 2",
-				"goal": 12,
+				"goal": 8,
 				"boss_map": false,
-				"max_strange": 3,
-				"max_frogs": 9,
-				"min_frogs": 4,
-				"difficulty": 1.35,
+				"max_strange": 2,
+				"max_frogs": 8,
+				"min_frogs": 3,
+				"difficulty": 1.05,
 				"allow_yellow": true,
 				"allow_blue": true,
 				"allow_golden": true,
-				"strange_respawn_min": 5.0,
-				"strange_respawn_max": 8.0,
+				"strange_respawn_min": 8.0,
+				"strange_respawn_max": 12.0,
 				"background": "res://assets/background/background_map2.png",
 				"obstacles": [
-					{"x": 0.18, "y": 0.22, "w": 0.12, "h": 0.08},
-					{"x": 0.48, "y": 0.28, "w": 0.10, "h": 0.18},
-					{"x": 0.70, "y": 0.22, "w": 0.12, "h": 0.08},
-					{"x": 0.32, "y": 0.52, "w": 0.14, "h": 0.08},
-					{"x": 0.58, "y": 0.55, "w": 0.10, "h": 0.16},
-					{"x": 0.22, "y": 0.72, "w": 0.12, "h": 0.08},
-					{"x": 0.72, "y": 0.70, "w": 0.13, "h": 0.08},
+					{"x": 0.22, "y": 0.30, "w": 0.10, "h": 0.07},
+					{"x": 0.55, "y": 0.45, "w": 0.10, "h": 0.14},
+					{"x": 0.70, "y": 0.68, "w": 0.11, "h": 0.07},
 				],
 			}
 		_:
-			# Mapa 3 — boss: Sapão Preto + vermelhos. Sem sapinhos pegáveis (maldade).
+			# Mapa 3 — boss: Sapão Preto + poucos vermelhos.
 			return {
-				"name": "Mapa 3 — Sapão Preto",
+				"name": "Missao Sapao Preto",
 				"goal": 1,
 				"boss_map": true,
-				"boss_hp": 12,
-				"max_strange": 3,
-				"max_frogs": 4,
+				"boss_hp": 8,
+				"max_strange": 1,
+				"max_frogs": 3,
 				"min_frogs": 0,
-				"difficulty": 1.5,
+				"difficulty": 1.15,
 				"allow_yellow": false,
 				"allow_blue": false,
 				"allow_golden": false,
-				"strange_respawn_min": 4.0,
-				"strange_respawn_max": 7.0,
+				"strange_respawn_min": 8.0,
+				"strange_respawn_max": 12.0,
 				"background": "res://assets/background/background_map3_hunt.png",
-				# Um único obstáculo no meio — força manobra contra o sapão.
 				"obstacles": [
-					{"x": 0.44, "y": 0.42, "w": 0.14, "h": 0.10},
+					{"x": 0.44, "y": 0.42, "w": 0.12, "h": 0.08},
 				],
 			}
 

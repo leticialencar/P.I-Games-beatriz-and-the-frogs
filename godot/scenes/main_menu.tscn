@@ -41,7 +41,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Center" unique_id=1191797956]
-custom_minimum_size = Vector2(640, 560)
+custom_minimum_size = Vector2(640, 680)
 layout_mode = 2
 
 [node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=934742049]
@@ -65,8 +65,22 @@ stretch_mode = 5
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3")
-theme_override_font_sizes/font_size = 28
-text = "Jogar"
+theme_override_font_sizes/font_size = 26
+text = "História"
+
+[node name="RankingButton" type="Button" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3")
+theme_override_font_sizes/font_size = 24
+text = "Ranking"
+
+[node name="BoardButton" type="Button" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3")
+theme_override_font_sizes/font_size = 20
+text = "Placar"
 
 [node name="LoreButton" type="Button" parent="Center/Panel/Margin/VBox" unique_id=877233338]
 custom_minimum_size = Vector2(0, 56)
