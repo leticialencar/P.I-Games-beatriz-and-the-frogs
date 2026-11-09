@@ -3,7 +3,7 @@ extends Control
 const DURATION := 8.0
 const MESSAGE_DELAY := 2.5
 const FROG_FRAME_DURATION := 0.15
-const FROG_SCALE := 0.45
+const FROG_SCALE := 0.64
 
 var messages := [
 	"Beatriz vai com ou sem falta porque ela não perde um bingo.",
@@ -92,14 +92,14 @@ func _show_next_message() -> void:
 
 
 func _load_frog_walk() -> void:
-	var sheet := load("res://assets/frog/frog_spritesheet.png") as Texture2D
+	var sheet := load("res://assets/frog/pink_frog_spritesheet.png") as Texture2D
 	var walk_rects := [
-		Rect2(65, 424, 198, 176),
-		Rect2(308, 424, 204, 173),
-		Rect2(547, 424, 204, 176),
-		Rect2(802, 429, 196, 171),
-		Rect2(1046, 428, 200, 173),
-		Rect2(1281, 428, 206, 169),
+		Rect2(46, 298, 139, 124),
+		Rect2(217, 298, 143, 122),
+		Rect2(385, 298, 143, 124),
+		Rect2(564, 302, 138, 120),
+		Rect2(736, 301, 141, 122),
+		Rect2(901, 301, 145, 119),
 	]
 
 	for region in walk_rects:

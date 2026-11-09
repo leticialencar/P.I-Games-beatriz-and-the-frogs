@@ -24,7 +24,7 @@ const CROSSHAIR_HOTSPOT := Vector2(32, 32)
 const SHOW_FRIENDS_SCENE := false
 
 ## Ranking: sobe a dificuldade a cada N segundos.
-const RANKING_WAVE_SECONDS := 15.0
+const RANKING_WAVE_SECONDS := 12.0
 const RANKING_COMBO_WINDOW := 2.5
 
 @onready var background: Sprite2D = $Background
@@ -90,7 +90,7 @@ func _ready() -> void:
 
 func _on_viewport_resized() -> void:
 	_layout_hud()
-	_setup_background(str(level.get("background", "res://assets/background/background.png")))
+	_setup_background(str(level.get("background", "res://assets/background/background_map_1.png")))
 
 
 func _process(delta: float) -> void:
@@ -195,11 +195,11 @@ func _layout_hud() -> void:
 	transition_label.size = Vector2(600, 120)
 
 
-func _setup_background(path: String = "res://assets/background/background.png") -> void:
+func _setup_background(path: String = "res://assets/background/background_map_1.png") -> void:
 	var texture := load(path) as Texture2D
 	if texture == null:
 		push_warning("Fundo não carregou: %s — usando fallback." % path)
-		texture = load("res://assets/background/background.png") as Texture2D
+		texture = load("res://assets/background/background_map_1.png") as Texture2D
 	if texture == null:
 		return
 
@@ -220,21 +220,23 @@ func _spawn_player() -> void:
 
 
 func _ranking_level_config(wave: int) -> Dictionary:
-	var strange := mini(1 + (wave - 1) / 2, 4)
+	var strange := mini(1 + (wave - 1) / 2, 6)
 	return {
 		"name": "Ranking",
 		"goal": 999999,
 		"boss_map": false,
 		"max_strange": strange,
-		"max_frogs": mini(7 + wave, 12),
-		"min_frogs": 3,
-		"difficulty": 1.0 + (wave - 1) * 0.12,
+		"max_frogs": mini(9 + wave, 16),
+		"min_frogs": mini(5 + (wave - 1) / 2, 10),
+		"difficulty": minf(1.0 + (wave - 1) * 0.13, 2.3),
 		"allow_yellow": true,
 		"allow_blue": wave >= 2,
 		"allow_golden": wave >= 4,
-		"strange_respawn_min": maxf(3.0, 8.0 - wave * 0.4),
-		"strange_respawn_max": maxf(5.0, 11.0 - wave * 0.4),
-		"background": "res://assets/background/background.png",
+		"strange_respawn_min": maxf(1.4, 4.8 - wave * 0.28),
+		"strange_respawn_max": maxf(2.4, 7.2 - wave * 0.35),
+		"spawn_delay_min": maxf(0.12, 0.32 - wave * 0.012),
+		"spawn_delay_max": maxf(0.28, 0.62 - wave * 0.018),
+		"background": "res://assets/background/background_map_1.png",
 		"obstacles": [
 			{"x": 0.30, "y": 0.40, "w": 0.10, "h": 0.07},
 			{"x": 0.62, "y": 0.55, "w": 0.11, "h": 0.07},
@@ -262,7 +264,7 @@ func _start_ranking() -> void:
 	_clear_frogs()
 	_spawn_obstacles()
 	freeze_timer = 0.0
-	spawn_interval = randf_range(0.3, 0.7)
+	spawn_interval = _next_spawn_interval()
 	spawn_timer = 0.0
 	yellow_spawn_timer = randf_range(4.0, 7.0)
 	blue_spawn_timer = randf_range(9.0, 12.0)
@@ -287,8 +289,11 @@ func _update_ranking_wave(delta: float) -> void:
 	GameState.ranking_wave = ranking_wave
 	level = _ranking_level_config(ranking_wave)
 	Frog.difficulty_scale = float(level["difficulty"])
+	# A nova onda começa pressionando imediatamente, sem esperar os timers antigos.
+	spawn_timer = spawn_interval
+	strange_respawn_timer = minf(strange_respawn_timer, 0.35)
 	boost_label.visible = true
-	boost_label.text = "Mais sapos! Mais rápido!"
+	boost_label.text = "Onda %d: mais sapos!" % ranking_wave
 	boost_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))
 
 
@@ -350,11 +355,21 @@ func _clear_obstacles() -> void:
 
 func _spawn_obstacles() -> void:
 	_clear_obstacles()
-	var rects := LevelData.obstacle_rects_for(current_map, Screen.size())
-	for rect in rects:
+	var screen := Screen.size()
+	var rects: Array[Rect2] = []
+	for item in level.get("obstacles", []):
+		rects.append(Rect2(
+			float(item["x"]) * screen.x,
+			float(item["y"]) * screen.y,
+			float(item["w"]) * screen.x,
+			float(item["h"]) * screen.y
+		))
+	var obstacle_map := 1 if ranking_mode else current_map
+	for index in range(rects.size()):
+		var rect := rects[index]
 		var obstacle := ObstacleScene.instantiate() as Obstacle
 		obstacles_root.add_child(obstacle)
-		obstacle.setup(rect)
+		obstacle.setup(rect, obstacle_map, index)
 		obstacle.add_to_group("obstacles")
 
 
@@ -370,7 +385,7 @@ func _spawn_initial_frogs() -> void:
 		entities.add_child(boss)
 		frogs.append(boss)
 		boss_frog = boss
-		# Só vermelhos pra atormentar — zero sapinhos pra pegar.
+		# Só vermelhos para proteger o Lasombra — zero sapinhos para pegar.
 		var strange_spots := [
 			Vector2(screen.x * 0.22, screen.y * 0.55),
 			Vector2(screen.x * 0.78, screen.y * 0.68),
@@ -488,7 +503,7 @@ func _try_catch_frog() -> void:
 				_apply_freeze()
 
 			spawn_timer = 0.0
-			spawn_interval = randf_range(0.3, 0.7)
+			spawn_interval = _next_spawn_interval()
 			break
 
 
@@ -564,7 +579,14 @@ func _update_spawn(delta: float) -> void:
 		if new_pos != Vector2.INF:
 			_add_frog(new_pos, Frog.FrogType.GREEN)
 			spawn_timer = 0.0
-			spawn_interval = randf_range(0.3, 0.7)
+			spawn_interval = _next_spawn_interval()
+
+
+func _next_spawn_interval() -> float:
+	return randf_range(
+		float(level.get("spawn_delay_min", 0.3)),
+		float(level.get("spawn_delay_max", 0.7))
+	)
 
 
 func _update_strange_respawn(delta: float) -> void:
@@ -662,7 +684,7 @@ func _update_hud() -> void:
 	lives_label.text = "Vidas: %d" % player.lives
 
 	if ranking_mode:
-		map_label.text = "RANKING"
+		map_label.text = "RANKING  •  ONDA %d" % ranking_wave
 		goal_label.text = _format_clock(game_time_ms)
 		goal_label.add_theme_color_override("font_color", Color.WHITE)
 		if freeze_timer > 0.0:
@@ -679,7 +701,7 @@ func _update_hud() -> void:
 			boost_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.2))
 		elif ranking_wave_timer < 1.6 and ranking_wave > 1:
 			boost_label.visible = true
-			boost_label.text = "Mais sapos! Mais rápido!"
+			boost_label.text = "Onda %d: mais sapos!" % ranking_wave
 			boost_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))
 		else:
 			boost_label.visible = false
@@ -778,7 +800,7 @@ func _on_map_cleared() -> void:
 	var blurb := "Os sapinhos estão mais ágeis..."
 	if current_map == 2:
 		title = "Carregando Mapa 3..."
-		blurb = "O Sapão Preto apareceu...\nBea pegou uma arma!"
+		blurb = "O Lasombra apareceu...\nBea pegou uma arma!"
 	_load_next_map(next_map, title, blurb)
 
 

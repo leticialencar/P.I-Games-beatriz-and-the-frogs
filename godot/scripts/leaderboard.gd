@@ -10,7 +10,7 @@ extends Control
 func _ready() -> void:
 	if not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	background.texture = load("res://assets/background/background.png")
+	background.texture = load("res://assets/background/background_map_1.png")
 	title_label.text = "PLACAR — TOP 10"
 	_fill_scores()
 	again_button.pressed.connect(_on_again)

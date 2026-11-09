@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://i1nu2tdt6umf"
-path="res://.godot/imported/bea_celebrate.png-dfd92167aa5663d3ef28461c6531b390.ctex"
+uid="uid://uwprocdekfck"
+path="res://.godot/imported/red_frog_spritesheet.png-698d0c62c0da1f3d35dd78b74904a73a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/player/bea_celebrate.png"
-dest_files=["res://.godot/imported/bea_celebrate.png-dfd92167aa5663d3ef28461c6531b390.ctex"]
+source_file="res://assets/frog/red_frog_spritesheet.png"
+dest_files=["res://.godot/imported/red_frog_spritesheet.png-698d0c62c0da1f3d35dd78b74904a73a.ctex"]
 
 [params]
 

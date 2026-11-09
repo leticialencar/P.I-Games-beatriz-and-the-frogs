@@ -21,10 +21,10 @@ static func get_config(map_number: int) -> Dictionary:
 				"allow_golden": false,
 				"strange_respawn_min": 10.0,
 				"strange_respawn_max": 14.0,
-				"background": "res://assets/background/background.png",
+				"background": "res://assets/background/background_map_1.png",
 				"obstacles": [
-					{"x": 0.32, "y": 0.42, "w": 0.10, "h": 0.07},
-					{"x": 0.58, "y": 0.58, "w": 0.10, "h": 0.07},
+					{"x": 0.30, "y": 0.34, "w": 0.15, "h": 0.18},
+					{"x": 0.58, "y": 0.62, "w": 0.20, "h": 0.11},
 				],
 			}
 		2:
@@ -41,17 +41,17 @@ static func get_config(map_number: int) -> Dictionary:
 				"allow_golden": true,
 				"strange_respawn_min": 8.0,
 				"strange_respawn_max": 12.0,
-				"background": "res://assets/background/background_map2.png",
+				"background": "res://assets/background/background_map_2.png",
 				"obstacles": [
-					{"x": 0.22, "y": 0.30, "w": 0.10, "h": 0.07},
-					{"x": 0.55, "y": 0.45, "w": 0.10, "h": 0.14},
-					{"x": 0.70, "y": 0.68, "w": 0.11, "h": 0.07},
+					{"x": 0.18, "y": 0.28, "w": 0.16, "h": 0.10},
+					{"x": 0.54, "y": 0.48, "w": 0.22, "h": 0.12},
+					{"x": 0.75, "y": 0.58, "w": 0.15, "h": 0.28},
 				],
 			}
 		_:
-			# Mapa 3 — boss: Sapão Preto + poucos vermelhos.
+			# Mapa 3 — boss: Lasombra + poucos vermelhos.
 			return {
-				"name": "Missao Sapao Preto",
+				"name": "Missão Lasombra",
 				"goal": 1,
 				"boss_map": true,
 				"boss_hp": 8,
@@ -64,9 +64,11 @@ static func get_config(map_number: int) -> Dictionary:
 				"allow_golden": false,
 				"strange_respawn_min": 8.0,
 				"strange_respawn_max": 12.0,
-				"background": "res://assets/background/background_map3_hunt.png",
+				"background": "res://assets/background/background_map_3.png",
 				"obstacles": [
-					{"x": 0.44, "y": 0.42, "w": 0.12, "h": 0.08},
+					{"x": 0.08, "y": 0.24, "w": 0.12, "h": 0.28},
+					{"x": 0.74, "y": 0.24, "w": 0.16, "h": 0.12},
+					{"x": 0.80, "y": 0.62, "w": 0.12, "h": 0.30},
 				],
 			}
 

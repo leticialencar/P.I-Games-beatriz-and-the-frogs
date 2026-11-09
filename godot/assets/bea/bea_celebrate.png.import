@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ci80e07tk55b8"
-path="res://.godot/imported/bea_sad.png-a45844bb825683162901f0821320fe5b.ctex"
+uid="uid://cllbowxjee65g"
+path="res://.godot/imported/bea_celebrate.png-f653570d3a6ef8bc7687bb27c4b9325f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/player/bea_sad.png"
-dest_files=["res://.godot/imported/bea_sad.png-a45844bb825683162901f0821320fe5b.ctex"]
+source_file="res://assets/bea/bea_celebrate.png"
+dest_files=["res://.godot/imported/bea_celebrate.png-f653570d3a6ef8bc7687bb27c4b9325f.ctex"]
 
 [params]
 
