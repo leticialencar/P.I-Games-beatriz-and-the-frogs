@@ -19,40 +19,40 @@ const BEA_SCALE := 0.42
 func _ready() -> void:
 	if not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	background.texture = load("res://assets/background/background.png")
+	background.texture = load("res://assets/background/background_map_1.png")
 
 	var caught := GameState.frogs_caught
 	if not GameState.survived:
 		title_label.text = "Game Over"
-		_load_animation("res://assets/player/bea_sad.png")
+		_load_animation("res://assets/bea/bea_sad.png")
 		stats_label.text = "As vidas acabaram!\nPontos: %d\nParou no Mapa %d" % [
 			caught,
 			GameState.current_map,
 		]
 	elif GameState.party_visited:
 		title_label.text = "Festa completa!"
-		_load_animation("res://assets/player/bea_celebrate.png")
+		_load_animation("res://assets/bea/bea_celebrate.png")
 		stats_label.text = "Bea encontrou a turma!\nPontos na caçada: %d\nVidas: %d" % [
 			caught,
 			GameState.lives_left,
 		]
 	elif GameState.maps_cleared >= LevelData.max_maps():
 		title_label.text = "Vitória!"
-		_load_animation("res://assets/player/bea_celebrate.png")
-		stats_label.text = "Sapão Preto derrotado!\nPontos: %d\nVidas: %d" % [
+		_load_animation("res://assets/bea/bea_celebrate.png")
+		stats_label.text = "Lasombra derrotado!\nPontos: %d\nVidas: %d" % [
 			caught,
 			GameState.lives_left,
 		]
 	elif GameState.maps_cleared >= 2:
 		title_label.text = "Missão cumprida!"
-		_load_animation("res://assets/player/bea_celebrate.png")
+		_load_animation("res://assets/bea/bea_celebrate.png")
 		stats_label.text = "Mapas concluídos!\nPontos: %d\nVidas: %d" % [
 			caught,
 			GameState.lives_left,
 		]
 	else:
 		title_label.text = "Missão cumprida!"
-		_load_animation("res://assets/player/bea_celebrate.png")
+		_load_animation("res://assets/bea/bea_celebrate.png")
 		stats_label.text = "Pontos: %d\nVidas restantes: %d" % [
 			caught,
 			GameState.lives_left,

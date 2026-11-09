@@ -211,7 +211,7 @@ func _update_sprite() -> void:
 
 
 func _load_sprites() -> void:
-	var sheet := load("res://assets/player/bea_spritesheet.png") as Texture2D
+	var sheet := load("res://assets/bea/bea_spritesheet.png") as Texture2D
 	var frame_h := int(FRAME_SIZE.y)
 
 	for i in range(2):

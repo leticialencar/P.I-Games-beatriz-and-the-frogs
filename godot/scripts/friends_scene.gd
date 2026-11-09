@@ -52,7 +52,7 @@ func _on_viewport_resized() -> void:
 
 
 func _setup_background() -> void:
-	background.texture = load("res://assets/background/background_map3.png")
+	background.texture = load("res://assets/background/background_map_1.png")
 	background.centered = false
 	background.position = Vector2.ZERO
 	var screen := Screen.size()

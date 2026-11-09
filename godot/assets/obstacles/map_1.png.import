@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cloi4k1wcofoi"
-path="res://.godot/imported/bea_spritesheet.png-03bcac66d32609f99986209a1945e38a.ctex"
+uid="uid://dkh4tdh27575p"
+path="res://.godot/imported/map_1.png-324727202cc91820b1f81b1a7d97219a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/player/bea_spritesheet.png"
-dest_files=["res://.godot/imported/bea_spritesheet.png-03bcac66d32609f99986209a1945e38a.ctex"]
+source_file="res://assets/obstacles/map_1.png"
+dest_files=["res://.godot/imported/map_1.png-324727202cc91820b1f81b1a7d97219a.ctex"]
 
 [params]
 

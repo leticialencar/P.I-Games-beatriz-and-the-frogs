@@ -1,12 +1,12 @@
 class_name Frog
 extends Node2D
 
-## Tipos do GDD (+ Sapão Preto no mapa 3).
+## Tipos do GDD (+ Lasombra no mapa 3).
 enum FrogType { GREEN, YELLOW, BLUE, GOLDEN, STRANGE, BOSS }
 
-## Escala confortável (o 0.36 ficou gigante no mapa atual).
-const SCALE := 0.22
-const BOSS_SCALE := 0.95
+## Os sapos comuns usam folhas 1080x720; Lasombra usa uma folha 1536x1024.
+const SCALE := 0.31
+const BOSS_SCALE := 0.52
 const BOSS_CONTACT_RADIUS := 78.0
 const BOSS_CHASE_SPEED := 95.0
 const BOSS_VISION := 9999.0
@@ -14,10 +14,6 @@ const WALK_FRAME_DURATION := 0.15
 const ACTION_FRAME_DURATION := 0.15
 const IDLE_FRAME_DURATIONS := [2.0, 0.5, 0.8, 1.2]
 
-const STRANGE_TINT := Color(0.9, 0.2, 0.35, 1.0)
-const YELLOW_TINT := Color(1.15, 0.95, 0.25, 1.0)
-const BLUE_TINT := Color(0.35, 0.7, 1.15, 1.0)
-const GOLDEN_TINT := Color(1.2, 0.85, 0.15, 1.0)
 const FROZEN_TINT := Color(0.55, 0.85, 1.2, 1.0)
 
 const VISION_RADIUS := 150.0
@@ -47,6 +43,9 @@ const GOLDEN_PATROL_SPEED := 180.0
 const GOLDEN_FLEE_SPEED := 260.0
 const GOLDEN_LIFETIME := 5.0
 const GOLDEN_DIR_CHANGE := 0.25
+const OBSTACLE_LOOKAHEAD := 18.0
+const BOSS_OBSTACLE_LOOKAHEAD := 30.0
+const OBSTACLE_CLEARANCE := 10.0
 
 ## Escala de dificuldade do mapa atual (1.0 = mapa 1).
 static var difficulty_scale := 1.0
@@ -80,6 +79,7 @@ var speed := PATROL_SPEED
 var lifetime := -1.0
 var expired := false
 var golden_dir_timer := 0.0
+var avoidance_side := 1.0
 var boss_hp := 12
 var boss_max_hp := 12
 var hit_flash := 0.0
@@ -89,21 +89,22 @@ signal boss_defeated
 func setup(type: FrogType, player_ref: Player) -> void:
 	frog_type = type
 	player = player_ref
+	avoidance_side = -1.0 if randf() < 0.5 else 1.0
 	match frog_type:
 		FrogType.STRANGE:
-			base_modulate = STRANGE_TINT
+			base_modulate = Color.WHITE
 			speed = PATROL_SPEED
 			lifetime = -1.0
 		FrogType.YELLOW:
-			base_modulate = YELLOW_TINT
+			base_modulate = Color.WHITE
 			speed = YELLOW_PATROL_SPEED
 			lifetime = YELLOW_LIFETIME
 		FrogType.BLUE:
-			base_modulate = BLUE_TINT
+			base_modulate = Color.WHITE
 			speed = BLUE_PATROL_SPEED
 			lifetime = BLUE_LIFETIME
 		FrogType.GOLDEN:
-			base_modulate = GOLDEN_TINT
+			base_modulate = Color.WHITE
 			speed = GOLDEN_PATROL_SPEED
 			lifetime = GOLDEN_LIFETIME
 		FrogType.BOSS:
@@ -176,9 +177,7 @@ func set_frozen(value: bool) -> void:
 
 
 func get_center() -> Vector2:
-	if sprite == null or sprite.texture == null:
-		return global_position
-	return global_position + sprite.texture.get_size() * 0.5
+	return global_position
 
 
 func _ready() -> void:
@@ -251,13 +250,35 @@ func take_hit(damage: int = 1) -> bool:
 
 
 func _apply_boss_look() -> void:
-	var tex := load("res://assets/frog/frog_boss_black.png") as Texture2D
-	if tex == null:
+	var sheet := load("res://assets/frog/lasombra_frog_spritesheet.png") as Texture2D
+	if sheet == null:
+		push_warning("Spritesheet do Lasombra não carregou.")
 		return
-	idle_textures = [tex]
-	walk_textures = [tex, tex]
-	action_textures = [tex]
-	sprite.texture = tex
+
+	idle_textures.clear()
+	walk_textures.clear()
+	action_textures.clear()
+
+	for column in range(4):
+		idle_textures.append(_slice_boss_cleaned(
+			sheet, Rect2(column * 384, 0, 384, 341), BOSS_SCALE
+		))
+	var walk_rects := [
+		Rect2(0, 330, 300, 340),
+		Rect2(270, 330, 280, 340),
+		Rect2(540, 330, 260, 340),
+		Rect2(790, 330, 260, 340),
+		Rect2(1035, 330, 270, 340),
+		Rect2(1285, 330, 251, 340),
+	]
+	for region in walk_rects:
+		walk_textures.append(_slice_boss_cleaned(sheet, region, BOSS_SCALE))
+	for column in range(4):
+		action_textures.append(_slice_boss_cleaned(
+			sheet, Rect2(column * 384, 682, 384, 342), BOSS_SCALE
+		))
+
+	sprite.texture = idle_textures[0]
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
@@ -402,32 +423,48 @@ func _random_dir() -> Vector2:
 
 
 func _try_move(distance: float) -> void:
-	var next := position + move_dir * distance
-	var body := _body_rect_at(next)
-	if _collides_with_obstacle(body):
-		# Tenta desviar: inverte e escolhe outro ângulo.
-		move_dir = -move_dir
-		next = position + move_dir * distance * 0.5
-		if _collides_with_obstacle(_body_rect_at(next)):
-			move_dir = _random_dir()
+	var lookahead := BOSS_OBSTACLE_LOOKAHEAD if frog_type == FrogType.BOSS else OBSTACLE_LOOKAHEAD
+	lookahead = maxf(lookahead, distance)
+	if _collides_with_obstacle(_body_rect_at(position + move_dir * lookahead)):
+		if not _choose_detour_direction(lookahead):
 			return
+
+	var next := position + move_dir * distance
+	if _collides_with_obstacle(_body_rect_at(next)):
+		return
 	position = next
 	_clamp_to_screen()
 
 
+func _choose_detour_direction(lookahead: float) -> bool:
+	# Mantém um lado preferido para não oscilar na frente do mesmo obstáculo.
+	var angles := [25.0, 45.0, 70.0, 90.0, 120.0, 150.0, 180.0]
+	for angle in angles:
+		for side in [avoidance_side, -avoidance_side]:
+			var candidate := move_dir.rotated(deg_to_rad(angle * side)).normalized()
+			var candidate_pos := position + candidate * lookahead
+			if not _collides_with_obstacle(_body_rect_at(candidate_pos)):
+				move_dir = candidate
+				avoidance_side = side
+				return true
+	avoidance_side *= -1.0
+	return false
+
+
 func _body_rect_at(pos: Vector2) -> Rect2:
-	var size := Vector2(40, 32)
-	if sprite != null and sprite.texture != null:
-		size = sprite.texture.get_size() * 0.7
-	return Rect2(pos + size * 0.15, size)
+	# Área estável nos pés; não varia com o tamanho de cada quadro da animação.
+	var size := Vector2(104, 72) if frog_type == FrogType.BOSS else Vector2(38, 30)
+	return Rect2(pos - size * 0.5, size)
 
 
 func _collides_with_obstacle(rect: Rect2) -> bool:
 	if not is_inside_tree():
 		return false
 	for node in get_tree().get_nodes_in_group("obstacles"):
-		if node.has_method("get_blocking_rect") and rect.intersects(node.get_blocking_rect()):
-			return true
+		if node.has_method("get_blocking_rect"):
+			var obstacle_rect: Rect2 = node.get_blocking_rect().grow(OBSTACLE_CLEARANCE)
+			if rect.intersects(obstacle_rect):
+				return true
 	return false
 
 
@@ -473,27 +510,44 @@ func _update_action(delta: float) -> void:
 
 
 func _load_sprites() -> void:
-	var sheet := load("res://assets/frog/frog_spritesheet.png") as Texture2D
+	if frog_type == FrogType.BOSS:
+		return
+
+	var sheet_path := "res://assets/frog/pink_frog_spritesheet.png"
+	match frog_type:
+		FrogType.YELLOW:
+			sheet_path = "res://assets/frog/yellow_frog_spritesheet.png"
+		FrogType.BLUE:
+			sheet_path = "res://assets/frog/blue_frog_spritesheet.png"
+		FrogType.GOLDEN:
+			sheet_path = "res://assets/frog/purple_frog_spritesheet.png"
+		FrogType.STRANGE:
+			sheet_path = "res://assets/frog/red_frog_spritesheet.png"
+
+	var sheet := load(sheet_path) as Texture2D
+	if sheet == null:
+		push_warning("Spritesheet do sapo não carregou: %s" % sheet_path)
+		return
 
 	var idle_rects := [
-		Rect2(174, 123, 201, 203),
-		Rect2(500, 123, 202, 202),
-		Rect2(824, 123, 200, 202),
-		Rect2(1159, 121, 200, 208),
+		Rect2(122, 86, 141, 143),
+		Rect2(352, 86, 142, 142),
+		Rect2(579, 86, 141, 142),
+		Rect2(815, 85, 141, 146),
 	]
 	var walk_rects := [
-		Rect2(65, 424, 198, 176),
-		Rect2(308, 424, 204, 173),
-		Rect2(547, 424, 204, 176),
-		Rect2(802, 429, 196, 171),
-		Rect2(1046, 428, 200, 173),
-		Rect2(1281, 428, 206, 169),
+		Rect2(46, 298, 139, 124),
+		Rect2(217, 298, 143, 122),
+		Rect2(385, 298, 143, 124),
+		Rect2(564, 302, 138, 120),
+		Rect2(736, 301, 141, 122),
+		Rect2(901, 301, 145, 119),
 	]
 	var action_rects := [
-		Rect2(174, 773, 207, 162),
-		Rect2(494, 702, 239, 212),
-		Rect2(802, 682, 214, 212),
-		Rect2(1153, 781, 200, 159),
+		Rect2(122, 543, 146, 114),
+		Rect2(347, 494, 168, 149),
+		Rect2(564, 480, 150, 149),
+		Rect2(811, 549, 141, 112),
 	]
 
 	for rect in idle_rects:
@@ -504,13 +558,82 @@ func _load_sprites() -> void:
 		action_textures.append(_slice_scaled(sheet, rect))
 
 
-func _slice_scaled(sheet: Texture2D, region: Rect2) -> Texture2D:
+func _slice_scaled(sheet: Texture2D, region: Rect2, scale_factor: float = SCALE) -> Texture2D:
 	var atlas := AtlasTexture.new()
 	atlas.atlas = sheet
 	atlas.region = region
 
 	var image := atlas.get_image()
-	var width := maxi(1, int(image.get_width() * SCALE))
-	var height := maxi(1, int(image.get_height() * SCALE))
+	var width := maxi(1, int(image.get_width() * scale_factor))
+	var height := maxi(1, int(image.get_height() * scale_factor))
 	image.resize(width, height, Image.INTERPOLATE_NEAREST)
 	return ImageTexture.create_from_image(image)
+
+
+func _slice_boss_cleaned(sheet: Texture2D, region: Rect2, scale_factor: float) -> Texture2D:
+	var atlas := AtlasTexture.new()
+	atlas.atlas = sheet
+	atlas.region = region
+	var image := atlas.get_image()
+	_keep_largest_alpha_component(image)
+	var used_rect := image.get_used_rect()
+	if used_rect.size.x > 0 and used_rect.size.y > 0:
+		image = image.get_region(used_rect)
+	var width := maxi(1, int(image.get_width() * scale_factor))
+	var height := maxi(1, int(image.get_height() * scale_factor))
+	image.resize(width, height, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(image)
+
+
+func _keep_largest_alpha_component(image: Image) -> void:
+	var width := image.get_width()
+	var height := image.get_height()
+	var visited := PackedByteArray()
+	visited.resize(width * height)
+	var largest := PackedInt32Array()
+	var neighbors := [
+		Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1),
+		Vector2i(-1, 0), Vector2i(1, 0),
+		Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1),
+	]
+
+	for y in range(height):
+		for x in range(width):
+			var start := y * width + x
+			if visited[start] != 0:
+				continue
+			visited[start] = 1
+			if image.get_pixel(x, y).a <= 0.01:
+				continue
+
+			var component := PackedInt32Array([start])
+			var queue := PackedInt32Array([start])
+			var head := 0
+			while head < queue.size():
+				var current := queue[head]
+				head += 1
+				var current_x := current % width
+				var current_y := current / width
+				for offset in neighbors:
+					var next_x: int = current_x + offset.x
+					var next_y: int = current_y + offset.y
+					if next_x < 0 or next_x >= width or next_y < 0 or next_y >= height:
+						continue
+					var next := next_y * width + next_x
+					if visited[next] != 0:
+						continue
+					visited[next] = 1
+					if image.get_pixel(next_x, next_y).a > 0.01:
+						queue.append(next)
+						component.append(next)
+			if component.size() > largest.size():
+				largest = component
+
+	var keep := PackedByteArray()
+	keep.resize(width * height)
+	for index in largest:
+		keep[index] = 1
+	for y in range(height):
+		for x in range(width):
+			if keep[y * width + x] == 0:
+				image.set_pixel(x, y, Color.TRANSPARENT)

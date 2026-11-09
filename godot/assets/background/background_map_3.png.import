@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bkqo0hxd20bjj"
-path="res://.godot/imported/frog_hunt_logo.png-d4122aa82bd0adb6ad5d794f2d0fcec4.ctex"
+uid="uid://beuvjayy5esrn"
+path="res://.godot/imported/background_map_3.png-7d4136861a80e280ec52c19e67f6241d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/frog_hunt_logo.png"
-dest_files=["res://.godot/imported/frog_hunt_logo.png-d4122aa82bd0adb6ad5d794f2d0fcec4.ctex"]
+source_file="res://assets/background/background_map_3.png"
+dest_files=["res://.godot/imported/background_map_3.png-7d4136861a80e280ec52c19e67f6241d.ctex"]
 
 [params]
 
