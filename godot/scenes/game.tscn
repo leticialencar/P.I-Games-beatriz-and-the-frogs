@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/frog_counter_bg.png" id="2"]
-[ext_resource type="Texture2D" path="res://assets/frog/frog_icon.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/frog_icon.png" id="3"]
 [ext_resource type="AudioStream" path="res://assets/sounds/game_music.mp3" id="4"]
 [ext_resource type="FontFile" path="res://assets/fonts/Minecraftia-Regular.ttf" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="6"]

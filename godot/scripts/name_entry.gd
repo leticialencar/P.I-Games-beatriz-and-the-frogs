@@ -20,7 +20,7 @@ var letter_labels: Array[Label] = []
 func _ready() -> void:
 	if not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	background.texture = load("res://assets/background/background.png")
+	background.texture = load("res://assets/background/background_map_1.png")
 	title_label.text = "NOVO RECORDE!"
 	score_label.text = "Pontos: %d\nTempo: %s" % [
 		GameState.ranking_score,

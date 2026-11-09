@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bqwrle576qyh3"
-path="res://.godot/imported/frog_spritesheet.png-3f18cdc5fcb210e87507ce075beda432.ctex"
+uid="uid://da7gp5pgs6u5i"
+path="res://.godot/imported/blue_frog_spritesheet.png-1a905776cc782171254c7407d2970a82.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/frog/frog_spritesheet.png"
-dest_files=["res://.godot/imported/frog_spritesheet.png-3f18cdc5fcb210e87507ce075beda432.ctex"]
+source_file="res://assets/frog/blue_frog_spritesheet.png"
+dest_files=["res://.godot/imported/blue_frog_spritesheet.png-1a905776cc782171254c7407d2970a82.ctex"]
 
 [params]
 

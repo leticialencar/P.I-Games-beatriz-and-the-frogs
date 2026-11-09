@@ -6,4 +6,4 @@
 script = ExtResource("1")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-centered = false
+centered = true
