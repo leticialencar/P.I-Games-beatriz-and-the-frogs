@@ -8,6 +8,6 @@ services:
     name: beatriz-and-the-frogs
     runtime: static
     plan: free
-    branch: upgrade-game
+    branch: main
     buildCommand: "true"
     staticPublishPath: build/web
