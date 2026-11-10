@@ -56,7 +56,7 @@ Há também um [`render.yaml`](render.yaml) pronto. Para gerar o export de novo:
 | Atirar (mapa 3) | Clique onde quiser mirar (diagonal ok) |
 | Pausar | Esc |
 
-**Modos:** História (mapas) · Ranking (endless + placar top 10)
+**Modos:** História (mapas) · Sobrevivência (endless + placar top 10)
 
 <br>
 

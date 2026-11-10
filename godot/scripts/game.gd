@@ -222,7 +222,7 @@ func _spawn_player() -> void:
 func _ranking_level_config(wave: int) -> Dictionary:
 	var strange := mini(1 + (wave - 1) / 2, 6)
 	return {
-		"name": "Ranking",
+		"name": "Sobrevivência",
 		"goal": 999999,
 		"boss_map": false,
 		"max_strange": strange,
@@ -684,7 +684,7 @@ func _update_hud() -> void:
 	lives_label.text = "Vidas: %d" % player.lives
 
 	if ranking_mode:
-		map_label.text = "RANKING  •  ONDA %d" % ranking_wave
+		map_label.text = "SOBREVIVÊNCIA  •  ONDA %d" % ranking_wave
 		goal_label.text = _format_clock(game_time_ms)
 		goal_label.add_theme_color_override("font_color", Color.WHITE)
 		if freeze_timer > 0.0:
