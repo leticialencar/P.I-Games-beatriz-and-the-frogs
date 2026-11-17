@@ -15,12 +15,19 @@ func _ready() -> void:
 	hint_label.text = "Digite seu nome para o placar"
 	confirm_button.pressed.connect(_confirm)
 	name_input.text_submitted.connect(func(_text: String): _confirm())
+	name_input.gui_input.connect(_on_name_input_gui_input)
 	name_input.grab_focus()
 
 
 func _confirm() -> void:
 	var player_name := name_input.text.strip_edges()
 	if player_name.is_empty():
+		if GameState.is_mobile_survival():
+			_open_mobile_name_prompt()
+			player_name = name_input.text.strip_edges()
+			if not player_name.is_empty():
+				_confirm()
+			return
 		hint_label.text = "Digite um nome para continuar"
 		return
 	confirm_button.disabled = true
@@ -41,6 +48,23 @@ func _confirm() -> void:
 
 func _go_to_board() -> void:
 	get_tree().change_scene_to_file("res://scenes/leaderboard.tscn")
+
+
+func _on_name_input_gui_input(event: InputEvent) -> void:
+	if not GameState.is_mobile_survival():
+		return
+	if event is InputEventScreenTouch and event.pressed:
+		_open_mobile_name_prompt()
+	elif event is InputEventMouseButton and event.pressed:
+		_open_mobile_name_prompt()
+
+
+func _open_mobile_name_prompt() -> void:
+	if not OS.has_feature("web"):
+		return
+	var entered_name := str(JavaScriptBridge.eval("window.prompt('Digite seu nome para o placar:', '')", true))
+	if entered_name != "null":
+		name_input.text = entered_name.strip_edges().substr(0, 32)
 
 
 func _format_time(ms: float) -> String:

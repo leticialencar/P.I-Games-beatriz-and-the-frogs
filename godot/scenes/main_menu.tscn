@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/menu_icons.png" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/mobile_survival_qr.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/ui/frog_icon.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/bea/bea_spritesheet.png" id="7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
 bg_color = Color(0.035, 0.09, 0.035, 0.8)
@@ -76,9 +77,9 @@ region = Rect2(434, 0, 434, 724)
 atlas = ExtResource("4")
 region = Rect2(868, 0, 435, 724)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_lore_icon"]
-atlas = ExtResource("4")
-region = Rect2(1303, 0, 435, 724)
+[sub_resource type="AtlasTexture" id="AtlasTexture_bea_icon"]
+atlas = ExtResource("7")
+region = Rect2(0, 0, 200, 218)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_exit_icon"]
 atlas = ExtResource("4")
@@ -280,7 +281,7 @@ offset_right = -10.0
 offset_bottom = 57.0
 grow_horizontal = 0
 mouse_filter = 2
-texture = SubResource("AtlasTexture_lore_icon")
+texture = SubResource("AtlasTexture_bea_icon")
 expand_mode = 1
 stretch_mode = 5
 
