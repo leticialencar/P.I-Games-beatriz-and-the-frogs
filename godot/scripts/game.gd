@@ -24,7 +24,7 @@ const CROSSHAIR_HOTSPOT := Vector2(32, 32)
 const SHOW_FRIENDS_SCENE := false
 
 ## Ranking: sobe a dificuldade a cada N segundos.
-const RANKING_WAVE_SECONDS := 12.0
+const RANKING_WAVE_SECONDS := 15.0
 const RANKING_COMBO_WINDOW := 2.5
 
 @onready var background: Sprite2D = $Background
@@ -220,22 +220,22 @@ func _spawn_player() -> void:
 
 
 func _ranking_level_config(wave: int) -> Dictionary:
-	var strange := mini(1 + (wave - 1) / 2, 6)
+	var strange := mini(1 + (wave - 1) / 2, 5)
 	return {
 		"name": "Sobrevivência",
 		"goal": 999999,
 		"boss_map": false,
 		"max_strange": strange,
-		"max_frogs": mini(9 + wave, 16),
-		"min_frogs": mini(5 + (wave - 1) / 2, 10),
-		"difficulty": minf(1.0 + (wave - 1) * 0.13, 2.3),
+		"max_frogs": mini(8 + wave, 14),
+		"min_frogs": mini(4 + (wave - 1) / 3, 8),
+		"difficulty": minf(1.0 + (wave - 1) * 0.10, 2.0),
 		"allow_yellow": true,
 		"allow_blue": wave >= 2,
 		"allow_golden": wave >= 4,
-		"strange_respawn_min": maxf(1.4, 4.8 - wave * 0.28),
-		"strange_respawn_max": maxf(2.4, 7.2 - wave * 0.35),
-		"spawn_delay_min": maxf(0.12, 0.32 - wave * 0.012),
-		"spawn_delay_max": maxf(0.28, 0.62 - wave * 0.018),
+		"strange_respawn_min": maxf(2.4, 6.0 - wave * 0.30),
+		"strange_respawn_max": maxf(3.6, 8.5 - wave * 0.35),
+		"spawn_delay_min": maxf(0.18, 0.38 - wave * 0.010),
+		"spawn_delay_max": maxf(0.35, 0.72 - wave * 0.015),
 		"background": "res://assets/background/background_map_1.png",
 		"obstacles": [
 			{"x": 0.30, "y": 0.40, "w": 0.10, "h": 0.07},
@@ -289,9 +289,7 @@ func _update_ranking_wave(delta: float) -> void:
 	GameState.ranking_wave = ranking_wave
 	level = _ranking_level_config(ranking_wave)
 	Frog.difficulty_scale = float(level["difficulty"])
-	# A nova onda começa pressionando imediatamente, sem esperar os timers antigos.
-	spawn_timer = spawn_interval
-	strange_respawn_timer = minf(strange_respawn_timer, 0.35)
+	# Mantém os timers atuais para a próxima onda não gerar um pico instantâneo.
 	boost_label.visible = true
 	boost_label.text = "Onda %d: mais sapos!" % ranking_wave
 	boost_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))

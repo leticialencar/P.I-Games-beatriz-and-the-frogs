@@ -16,7 +16,8 @@ const IDLE_FRAME_DURATIONS := [2.0, 0.5, 0.8, 1.2]
 
 const FROZEN_TINT := Color(0.55, 0.85, 1.2, 1.0)
 
-const VISION_RADIUS := 150.0
+# Raio no qual o sapinho estranho detecta e persegue a Bea.
+const VISION_RADIUS := 190.0
 const CONTACT_RADIUS := 48.0
 const PATROL_SPEED := 55.0
 const CHASE_SPEED := 110.0

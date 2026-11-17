@@ -19,6 +19,7 @@ const LORE_TEXT := (
 @onready var click_sound: AudioStreamPlayer = $ClickSound
 
 var showing_lore := false
+var icon_tweens: Dictionary = {}
 
 
 func _ready() -> void:
@@ -34,6 +35,8 @@ func _ready() -> void:
 	board_button.pressed.connect(_on_board_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	lore_button.pressed.connect(_on_lore_pressed)
+	for button in [play_button, ranking_button, board_button, lore_button, quit_button]:
+		_setup_button_icon_hover(button)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -46,6 +49,30 @@ func _toggle_fullscreen() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+
+func _setup_button_icon_hover(button: Button) -> void:
+	var icon := button.get_node_or_null("Icon") as TextureRect
+	if icon == null:
+		return
+	icon.pivot_offset = icon.size * 0.5
+	button.mouse_entered.connect(func(): _animate_button_icon(button, true))
+	button.mouse_exited.connect(func(): _animate_button_icon(button, false))
+
+
+func _animate_button_icon(button: Button, hovering: bool) -> void:
+	var icon := button.get_node_or_null("Icon") as TextureRect
+	if icon == null:
+		return
+	if icon_tweens.has(button):
+		var previous := icon_tweens[button] as Tween
+		if is_instance_valid(previous):
+			previous.kill()
+
+	var tween := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	icon_tweens[button] = tween
+	var target_scale := Vector2.ONE * (1.14 if hovering else 1.0)
+	tween.tween_property(icon, "scale", target_scale, 0.14)
 
 
 func _set_mode_buttons_visible(visible_buttons: bool) -> void:
