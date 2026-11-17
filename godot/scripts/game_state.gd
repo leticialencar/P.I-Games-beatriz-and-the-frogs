@@ -27,6 +27,7 @@ func _ready() -> void:
 	qr_survival_mode = query.contains("mode=survival")
 	if qr_survival_mode:
 		JavaScriptBridge.eval("screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(function() {})", true)
+		_enable_landscape_guard()
 
 
 func is_mobile_survival() -> bool:
@@ -37,6 +38,24 @@ func api_url(endpoint: String) -> String:
 	if OS.has_feature("web"):
 		return str(JavaScriptBridge.eval("window.location.origin", true)) + endpoint
 	return "http://127.0.0.1:3000" + endpoint
+
+
+func _enable_landscape_guard() -> void:
+	JavaScriptBridge.eval("""
+(function() {
+  const guardId = 'beatriz-landscape-guard';
+  if (document.getElementById(guardId)) return;
+  const guard = document.createElement('div');
+  guard.id = guardId;
+  guard.style.cssText = 'position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:#10220deF;color:#fff;text-align:center;font:700 20px monospace;padding:28px;box-sizing:border-box;';
+  guard.innerHTML = '<div style="border:4px solid #84cf3d;background:#193312;padding:24px;max-width:300px;box-shadow:6px 6px 0 #071004"><div style="font-size:44px;margin-bottom:14px">↻</div><div>VIRE O CELULAR</div><div style="font-size:13px;line-height:1.5;margin-top:12px;color:#eaffc9">Este modo funciona apenas em paisagem.</div></div>';
+  document.body.appendChild(guard);
+  const update = () => { guard.style.display = window.innerHeight > window.innerWidth ? 'flex' : 'none'; };
+  window.addEventListener('resize', update);
+  window.addEventListener('orientationchange', update);
+  update();
+})();
+""", true)
 
 
 func reset() -> void:

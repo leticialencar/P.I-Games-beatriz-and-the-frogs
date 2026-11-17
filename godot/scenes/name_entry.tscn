@@ -3,6 +3,20 @@
 [ext_resource type="Script" path="res://scripts/name_entry.gd" id="1"]
 [ext_resource type="FontFile" path="res://assets/fonts/Minecraftia-Regular.ttf" id="2"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_name_input"]
+bg_color = Color(0.06, 0.14, 0.05, 0.96)
+content_margin_left = 16.0
+content_margin_right = 16.0
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.78, 0.2, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [node name="NameEntry" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -71,8 +85,13 @@ horizontal_alignment = 1
 [node name="NameInput" type="LineEdit" parent="Center/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_placeholder_color = Color(0.75, 0.85, 0.7, 0.8)
+theme_override_colors/caret_color = Color(0.95, 1, 0.65, 1)
 theme_override_fonts/font = ExtResource("2")
 theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_name_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_name_input")
 placeholder_text = "Digite seu nome"
 max_length = 32
 alignment = 1
