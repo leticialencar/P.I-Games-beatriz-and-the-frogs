@@ -37,6 +37,13 @@ func _ready() -> void:
 	lore_button.pressed.connect(_on_lore_pressed)
 	for button in [play_button, ranking_button, board_button, lore_button, quit_button]:
 		_setup_button_icon_hover(button)
+	if GameState.is_mobile_survival():
+		call_deferred("_open_mobile_survival")
+
+
+func _open_mobile_survival() -> void:
+	GameState.ranking_mode = true
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:

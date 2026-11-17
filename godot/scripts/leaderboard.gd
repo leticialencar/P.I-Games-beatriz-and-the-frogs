@@ -26,7 +26,29 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _fill_scores() -> void:
-	var scores: Array = GameState.load_highscores()
+	if OS.has_feature("web"):
+		scores_label.text = "Carregando placar..."
+		var request := HTTPRequest.new()
+		add_child(request)
+		request.request_completed.connect(_on_scores_loaded)
+		if request.request("/api/leaderboard") != OK:
+			_show_scores(GameState.load_highscores())
+		return
+	_show_scores(GameState.load_highscores())
+
+
+func _on_scores_loaded(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		_show_scores(GameState.load_highscores())
+		return
+	var payload = JSON.parse_string(body.get_string_from_utf8())
+	if not (payload is Dictionary):
+		_show_scores(GameState.load_highscores())
+		return
+	_show_scores(payload.get("scores", []))
+
+
+func _show_scores(scores: Array) -> void:
 	if scores.is_empty():
 		scores_label.text = "Nenhum recorde ainda.\nSeja o primeiro!"
 		return

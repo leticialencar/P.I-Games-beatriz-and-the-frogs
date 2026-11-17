@@ -17,6 +17,7 @@ const FrogScene := preload("res://scenes/frog.tscn")
 const PlayerScene := preload("res://scenes/player.tscn")
 const ObstacleScene := preload("res://scenes/obstacle.tscn")
 const BulletScript := preload("res://scripts/bullet.gd")
+const MobileControlsScene := preload("res://scenes/mobile_controls.tscn")
 const CROSSHAIR_PATH := "res://assets/ui/crosshair_cursor.png"
 const CROSSHAIR_HOTSPOT := Vector2(32, 32)
 
@@ -76,6 +77,8 @@ func _ready() -> void:
 	GameState.reset()
 	GameState.ranking_mode = ranking_mode
 	_spawn_player()
+	if ranking_mode and GameState.is_mobile_survival():
+		_enable_mobile_controls()
 	_layout_hud()
 	if ranking_mode:
 		_start_ranking()
@@ -86,6 +89,13 @@ func _ready() -> void:
 	map_loading.visible = false
 	music.play()
 	get_viewport().size_changed.connect(_on_viewport_resized)
+
+
+func _enable_mobile_controls() -> void:
+	var controls := MobileControlsScene.instantiate() as MobileControls
+	$HUD.add_child(controls)
+	controls.direction_changed.connect(func(direction: Vector2): player.touch_direction = direction)
+	controls.catch_pressed.connect(_try_catch_frog)
 
 
 func _on_viewport_resized() -> void:
@@ -884,7 +894,9 @@ func _finish_game(survived: bool) -> void:
 	get_tree().paused = false
 
 	if ranking_mode:
-		if GameState.qualifies_for_board(total_points):
+		if total_points > 0 and OS.has_feature("web"):
+			get_tree().change_scene_to_file("res://scenes/name_entry.tscn")
+		elif GameState.qualifies_for_board(total_points):
 			get_tree().change_scene_to_file("res://scenes/name_entry.tscn")
 		else:
 			get_tree().change_scene_to_file("res://scenes/leaderboard.tscn")

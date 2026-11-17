@@ -20,6 +20,7 @@ var facing_right := true
 var moving := false
 var speed_multiplier := 1.0
 var speed_boost_timer := 0.0
+var touch_direction := Vector2.ZERO
 
 var lives := MAX_LIVES
 var invulnerable := false
@@ -146,6 +147,8 @@ func _handle_movement() -> void:
 		input_vector.y -= 1.0
 	if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
 		input_vector.y += 1.0
+	if touch_direction.length() > 0.05:
+		input_vector = touch_direction
 
 	moving = input_vector != Vector2.ZERO
 

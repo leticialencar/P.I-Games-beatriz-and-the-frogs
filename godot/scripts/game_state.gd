@@ -17,6 +17,20 @@ var party_visited: bool = false
 var ranking_mode: bool = false
 var ranking_score: int = 0
 var ranking_wave: int = 1
+var qr_survival_mode: bool = false
+
+
+func _ready() -> void:
+	if not OS.has_feature("web"):
+		return
+	var query := str(JavaScriptBridge.eval("window.location.search", true))
+	qr_survival_mode = query.contains("mode=survival")
+	if qr_survival_mode:
+		JavaScriptBridge.eval("screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(function() {})", true)
+
+
+func is_mobile_survival() -> bool:
+	return qr_survival_mode
 
 
 func reset() -> void:
