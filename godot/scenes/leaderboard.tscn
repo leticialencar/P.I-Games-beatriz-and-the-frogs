@@ -58,7 +58,7 @@ theme_override_constants/separation = 16
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2")
 theme_override_font_sizes/font_size = 26
-text = "PLACAR — TOP 10"
+text = "PLACAR - TOP 10"
 horizontal_alignment = 1
 
 [node name="ScoresLabel" type="Label" parent="Center/Panel/Margin/VBox"]
