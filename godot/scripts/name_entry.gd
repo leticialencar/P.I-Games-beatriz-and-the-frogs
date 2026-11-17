@@ -25,6 +25,7 @@ func _confirm() -> void:
 		return
 	confirm_button.disabled = true
 	name_input.editable = false
+	hint_label.text = "Salvando pontuacao..."
 	if not OS.has_feature("web"):
 		GameState.submit_highscore(player_name, GameState.ranking_score, GameState.game_time_ms)
 		_go_to_board()
@@ -33,7 +34,7 @@ func _confirm() -> void:
 	add_child(request)
 	request.request_completed.connect(func(_result, _code, _headers, _body): _go_to_board())
 	var payload := JSON.stringify({"name": player_name, "score": GameState.ranking_score, "time_ms": GameState.game_time_ms})
-	var error := request.request("/api/scores", ["Content-Type: application/json"], HTTPClient.METHOD_POST, payload)
+	var error := request.request(GameState.api_url("/api/scores"), ["Content-Type: application/json"], HTTPClient.METHOD_POST, payload)
 	if error != OK:
 		_go_to_board()
 

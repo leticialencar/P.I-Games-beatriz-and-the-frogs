@@ -33,6 +33,12 @@ func is_mobile_survival() -> bool:
 	return qr_survival_mode
 
 
+func api_url(endpoint: String) -> String:
+	if OS.has_feature("web"):
+		return str(JavaScriptBridge.eval("window.location.origin", true)) + endpoint
+	return "http://127.0.0.1:3000" + endpoint
+
+
 func reset() -> void:
 	frogs_caught = 0
 	game_time_ms = 0.0

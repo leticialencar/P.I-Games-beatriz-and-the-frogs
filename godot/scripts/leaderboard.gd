@@ -31,7 +31,7 @@ func _fill_scores() -> void:
 		var request := HTTPRequest.new()
 		add_child(request)
 		request.request_completed.connect(_on_scores_loaded)
-		if request.request("/api/leaderboard") != OK:
+	if request.request(GameState.api_url("/api/leaderboard")) != OK:
 			_show_scores(GameState.load_highscores())
 		return
 	_show_scores(GameState.load_highscores())
