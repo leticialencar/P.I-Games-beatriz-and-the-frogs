@@ -21,10 +21,17 @@ var qr_survival_mode: bool = false
 
 
 func _ready() -> void:
+	refresh_mobile_launch()
+
+
+func refresh_mobile_launch() -> void:
 	if not OS.has_feature("web"):
 		return
 	var location := str(JavaScriptBridge.eval("window.location.href", true))
-	qr_survival_mode = location.contains("mode=survival") or location.contains("mobile=1")
+	var is_mobile_link := location.contains("mode=survival") or location.contains("mobile=1")
+	if not is_mobile_link:
+		return
+	qr_survival_mode = true
 	if qr_survival_mode:
 		JavaScriptBridge.eval("screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(function() {})", true)
 		_enable_landscape_guard()

@@ -23,6 +23,7 @@ var icon_tweens: Dictionary = {}
 
 
 func _ready() -> void:
+	GameState.refresh_mobile_launch()
 	if not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	background.texture = load("res://assets/background/background_map_1.png")
