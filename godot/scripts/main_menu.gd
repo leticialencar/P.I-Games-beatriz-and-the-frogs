@@ -38,12 +38,7 @@ func _ready() -> void:
 	for button in [play_button, ranking_button, board_button, lore_button, quit_button]:
 		_setup_button_icon_hover(button)
 	if GameState.is_mobile_survival():
-		call_deferred("_open_mobile_survival")
-
-
-func _open_mobile_survival() -> void:
-	GameState.ranking_mode = true
-	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+		play_button.visible = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -83,7 +78,7 @@ func _animate_button_icon(button: Button, hovering: bool) -> void:
 
 
 func _set_mode_buttons_visible(visible_buttons: bool) -> void:
-	play_button.visible = visible_buttons
+	play_button.visible = visible_buttons and not GameState.is_mobile_survival()
 	ranking_button.visible = visible_buttons
 	board_button.visible = visible_buttons
 	quit_button.visible = visible_buttons
