@@ -513,7 +513,8 @@ func _load_sprites() -> void:
 	if frog_type == FrogType.BOSS:
 		return
 
-	var sheet_path := "res://assets/frog/pink_frog_spritesheet.png"
+	# O tipo comum (GREEN) usa o spritesheet original; os demais têm assets próprios.
+	var sheet_path := "res://assets/frog/frog_spritesheet.png"
 	match frog_type:
 		FrogType.YELLOW:
 			sheet_path = "res://assets/frog/yellow_frog_spritesheet.png"
@@ -529,6 +530,7 @@ func _load_sprites() -> void:
 		push_warning("Spritesheet do sapo não carregou: %s" % sheet_path)
 		return
 
+	var scale_factor := SCALE
 	var idle_rects := [
 		Rect2(122, 86, 141, 143),
 		Rect2(352, 86, 142, 142),
@@ -549,13 +551,36 @@ func _load_sprites() -> void:
 		Rect2(564, 480, 150, 149),
 		Rect2(811, 549, 141, 112),
 	]
+	if frog_type == FrogType.GREEN:
+		# O asset original possui dimensões e regiões de animação diferentes.
+		scale_factor = 0.22
+		idle_rects = [
+			Rect2(174, 123, 201, 203),
+			Rect2(500, 123, 202, 202),
+			Rect2(824, 123, 200, 202),
+			Rect2(1159, 121, 200, 208),
+		]
+		walk_rects = [
+			Rect2(65, 424, 198, 176),
+			Rect2(308, 424, 204, 173),
+			Rect2(547, 424, 204, 176),
+			Rect2(802, 429, 196, 171),
+			Rect2(1046, 428, 200, 173),
+			Rect2(1281, 428, 206, 169),
+		]
+		action_rects = [
+			Rect2(174, 773, 207, 162),
+			Rect2(494, 702, 239, 212),
+			Rect2(802, 682, 214, 212),
+			Rect2(1153, 781, 200, 159),
+		]
 
 	for rect in idle_rects:
-		idle_textures.append(_slice_scaled(sheet, rect))
+		idle_textures.append(_slice_scaled(sheet, rect, scale_factor))
 	for rect in walk_rects:
-		walk_textures.append(_slice_scaled(sheet, rect))
+		walk_textures.append(_slice_scaled(sheet, rect, scale_factor))
 	for rect in action_rects:
-		action_textures.append(_slice_scaled(sheet, rect))
+		action_textures.append(_slice_scaled(sheet, rect, scale_factor))
 
 
 func _slice_scaled(sheet: Texture2D, region: Rect2, scale_factor: float = SCALE) -> Texture2D:
